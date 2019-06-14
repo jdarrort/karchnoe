@@ -1,0 +1,10 @@
+@startuml
+actor "Heloise" as hel
+participant home
+participant work
+actor "Clarisse" as cla
+
+hel -> cla : Stop yelling at me !
+home -> work : Go to work
+
+@enduml

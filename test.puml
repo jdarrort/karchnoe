@@ -1,0 +1,13 @@
+@startuml
+actor "nelllllly" as ju
+participant home
+participant work
+ju -> ju [[http://localhost/api/getsdfromfile?file=test2.puml]]: wakeup
+ju -> home : Go home
+
+ju -> ju [[#tohere My Link]]: link2
+note over home : work from home
+
+home -> work : Go to work
+
+@enduml

@@ -1,0 +1,14 @@
+{
+  "name": "karchnoe",
+  "version": "1.0.0",
+  "description": "New KARCH Tool",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "J.Darrort (ACV)",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.17.1"
+  }
+}
