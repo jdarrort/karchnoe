@@ -12,4 +12,4 @@ RUN npm install
 CMD [ "node", "index.js" ]
 
 # docker build -t karchnoe .
-# docker run  -d -p xxxx:80 karchnoe
+# docker run  -d -p 9999:80 -t karchnoe -v /opt/ACMS/kamereon-architecture-diagram/:/opt/karch/karch_repo --name karchnoe karchnoe

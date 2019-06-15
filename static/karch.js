@@ -23,7 +23,7 @@ function APICall( in_api, in_params, in_notjson) {
         var uri_params = formatParams(in_params);
 
         var req = new XMLHttpRequest();
-        req.open('GET',"http://localhost/" + "api/" + in_api + uri_params, true);
+        req.open('GET',ROOT_URI + "api/" + in_api + uri_params, true);
         req.setRequestHeader('X-Requested-With', 'XHR');
         
         req.onreadystatechange = function () {
@@ -100,8 +100,9 @@ async function renderPuml (in_file){
 /********************* */
 /********************* */
 /********************* */
+var ROOT_URI = document.baseURI;
 window.onload = async function(){
-    var root_dir_el = document.getElementById("root_dir");
+	var root_dir_el = document.getElementById("root_dir");
     renderDirContent(root_dir_el, ".");
     console.log(root_dir);
 }
