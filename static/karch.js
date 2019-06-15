@@ -84,10 +84,16 @@ async function renderDirContent( in_el, in_dir_path){
     });
 }
 
+/********************* */
 async function renderPuml (in_file){
-    var svgdata = await APICall("getsdfromfile",{file : in_file.filename}, true);
-    var content_el = document.getElementById("content_el");
-    content_el.innerHTML = svgdata;
+    try {
+        var svgdata = await APICall("getsdfromfile",{file : in_file.filename, dir : in_file.path}, true);
+        var content_el = document.getElementById("content_el");
+        content_el.innerHTML = svgdata;
+        }
+    catch (e) {
+        console.error("Failed to retrieve puml");
+    }
 }
 
 /********************* */

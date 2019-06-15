@@ -1,5 +1,5 @@
 @startuml
-actor "nelllllly" as ju
+actor "ju" as ju
 participant home
 participant work
 ju -> ju [[http://localhost/api/getsdfromfile?file=test2.puml]]: wakeup

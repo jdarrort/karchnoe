@@ -7,6 +7,7 @@ var app = express();
 const C_SERVER_PORT = 80
 
 global.appRoot = path.resolve(__dirname);
+global.repoRoot = path.join(path.resolve(__dirname), "karch_repo");
 
 app.disable('x-powered-by');
 // serve static content.

@@ -5,14 +5,6 @@ var path = require('path');
 const { exec } = require('child_process');
 
 
-
-/********************* */
-router.get('/getdirs',  (req, res, next) => {
-    // var dirs = dirTree("./");
-    var dirs = walk("./");
-    res.json(dirs);
-});
-
 /********************* */
 router.get('/browsedir',  (req, res, next) => {
     //var listfiles = fs.readdirSync(req.param("dir"));
@@ -26,9 +18,10 @@ router.get('/getsdfromfile',  (req, res, next) => {
     // if yes, check timestamp vs plantuml source, to see if update required.
     let imgname =req.param("file").replace(/\.[^/.]+$/, ".svg")
 
+    var full_file_path = path.join(global.repoRoot,  req.param("dir"),  req.param("file"));
     // get puml file if exists
     try {
-        var puml_file_stats = fs.statSync( path.join(global.appRoot,req.param("file") ) );
+        var puml_file_stats = fs.statSync(full_file_path );
     } catch (e) {
         res.status(404)
         res.send("KO, file not exists"); 
@@ -47,10 +40,9 @@ router.get('/getsdfromfile',  (req, res, next) => {
         // continue
         console.log("no existing file, generate it");
     }
-
     if ( should_generate) {
         // FYI, context of execution is root path of script.
-        exec('java -jar plant/plantuml.jar -tsvg -o svgs ' + req.param("file"), (err, stdout, stderr) => {
+        exec('java -jar plant/plantuml.jar -tsvg -o '+path.join(global.appRoot, "svgs")+' ' + full_file_path, (err, stdout, stderr) => {
             if (err) {
                 res.status(500)
                 res.json(err);
@@ -77,18 +69,19 @@ var readdir = function(dir) {
         dirs : [],
         files : []
     };
-    var list = fs.readdirSync(dir);
+    working_dir = path.join(global.repoRoot, dir);
+    var list = fs.readdirSync(working_dir);
     list.forEach(function(file) {
         var fullpath = dir + '/' + file;
-        var stat = fs.statSync(fullpath);
+        var stat = fs.statSync(path.join(global.repoRoot, fullpath));
         if (stat && stat.isDirectory()) { 
             // Count elem in dir
-            var subcount = fs.readdirSync(fullpath).length;
+            var subcount = fs.readdirSync( path.join(global.repoRoot, fullpath)).length;
 
             direlems.dirs.push({dirname : file, subcount : subcount, path : fullpath});
         } else {
             //its a file
-            direlems.files.push({filename : file, type : path.extname(file).substr(1), path : fullpath});
+            direlems.files.push({filename : file, type : path.extname(file).substr(1), path : dir});
         }
     });
     return direlems;
