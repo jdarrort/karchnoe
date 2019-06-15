@@ -1,18 +1,15 @@
-FROM openjdk:latest
+FROM timbru31/java-node
 
-RUN apt-get install -y curl \
-  && curl -sL https://deb.nodesource.com/setup_10.x | bash - \
-  && apt-get install -y nodejs \
-  && curl -L https://www.npmjs.com/install.sh | sh \
+RUN mkdir /opt/karch
+COPY *.* /opt/karch/
+COPY static/ /opt/karch/static/
+COPY apis/ /opt/karch/apis/
+COPY plant/ /opt/karch/plant/
 
-RUN mkdir /opt
-COPY *.* /opt
-COPY static/ /opt/static/
-COPY apis/ /opt/apis/
-COPY plant/ /opt/plant/
-
-WORKDIR /opt
+WORKDIR /opt/karch
 RUN npm install
 
 CMD [ "node", "index.js" ]
 
+# docker build -t karchnoe .
+# docker run  -d -p xxxx:80 karchnoe
