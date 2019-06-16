@@ -1,8 +1,54 @@
 
-// handle URL change, and trigger XHR
-window.onhashchange = function(){
-    console.log("Switching to " + location.hash)
+function kAlert(code, msg){
+    document.getElementById("alert_code").innerText = code;
+    document.getElementById("alert_msg").innerText = msg;
+    document.getElementById("alert").style.display="block";
+}
+function kNotify(code, msg){
+    document.getElementById("notif_code").innerText = code;
+    document.getElementById("notif_msg").innerText = msg;
+    document.getElementById("notif").style.display="block";
+}
 
+
+// handle URL change, and trigger XHR
+window.onhashchange = async function(){
+    console.log("Switching to " + location.hash)
+    var opt = processhref(location.hash);
+    var res
+    switch (opt.action){
+        case 'searchApi'  :
+            opt.params.type="api";
+                res = await APICall("searchsd", opt.params);
+                if (res.count == 1){
+                    renderPuml(res.results[0]);
+                } else if (res.count == 0) {
+                    kAlert("","Could not find any match");
+
+                } else {
+                    kNotify("","Several possibilities");
+                }
+                console.log(res);
+            break;
+        case 'searchMq'  :
+            break;
+    }
+
+};
+// handle URL change, and trigger XHR
+function processhref(in_href){
+    // Interpret path :
+    var matchs= in_href.match(/#(.*)\?(.*)/);
+    var action, tmp_params, params={}
+    if (matchs){
+        action = matchs[1];
+        tmp_params = matchs[2];
+        tmp_params.split("&").forEach( p => {
+            let o = p.split("=");
+            params[o[0]] = o[1];
+        })
+    }
+    return {action : action, params : params}
 };
 /********************* */
 function formatParams( params ){
@@ -32,6 +78,8 @@ function APICall( in_api, in_params, in_notjson) {
                     resolve( in_notjson ?  req.responseText : JSON.parse(req.responseText));
                 } else {
                     console.warn("Call failed to " + in_api + " with " + JSON.stringify(in_params, true));
+                    kAlert("ERR("+req.status+")","Failed to execute " );
+
                     reject();
                 }
             }
@@ -201,7 +249,7 @@ function toggleBrowser( mode ){
 /********************* */
 /********************* */
 /********************* */
-var ROOT_URI = document.baseURI;
+var ROOT_URI = document.baseURI.replace(/#.*/,"");
 var TAB_ID = 0;
 var LOADED_TABS = {};
 window.onload = async function(){

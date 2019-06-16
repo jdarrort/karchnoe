@@ -116,7 +116,7 @@ router.get('/searchsd',  (req, res, next) => {
             dir_content.files.forEach ( f => {
                 if (f.filename.match(file_pattern_re)){
                     // Found a matching file !
-                    matchs.push({dir : search_path, filename : f })
+                    matchs.push(f);
                 }
             });
             res.json({
@@ -125,6 +125,26 @@ router.get('/searchsd',  (req, res, next) => {
             });
             break;
         case 'mq' : 
+            search_path = path.join(target_adapter.path, target_adapter.name + "_MQ_processing");
+            if ( ! fs.statSync(path.join(global.repoRoot,search_path)) ) {
+                res.status(404)
+                res.json({ msg : "Path to APIs not found"});
+                return;
+            }        
+            filepattern = [ target_adapter.name, "MQ", req.param("ref")].join("_") + "_";
+            file_pattern_re = new RegExp("^" + filepattern, "i" );
+            dir_content = readdir(search_path);
+            dir_content.files.forEach ( f => {
+                if (f.filename.match(file_pattern_re)){
+                    // Found a matching file !
+                    matchs.push(f)
+                }
+            });
+            res.json({
+                count : matchs.length,
+                results : matchs
+            });
+
             break;
         default : 
             res.status(400)
@@ -134,6 +154,14 @@ router.get('/searchsd',  (req, res, next) => {
 
     //res.send("searchsd");
 });
+
+
+
+/** ******************************************** */
+/** ******************************************** */
+//          UTILITIES
+/** ******************************************** */
+/** ******************************************** */
 
 /* Browse a DIRECTORY */
 var readdir = function(dir) {
