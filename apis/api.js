@@ -21,7 +21,7 @@ router.get('/browsedir',  (req, res, next) => {
 router.get('/getsvgfromfile',  (req, res, next) => {
     // check if previously generated image exists.
     // if yes, check timestamp vs plantuml source, to see if update required.
-    let imgname =req.param("file").replace(/\.[^/.]+$/, ".svg")
+    let imgname =req.param("file").replace(/\.[^/.]+$/, ".svg");
 
     var full_file_path = path.join(global.repoRoot,  req.param("dir"),  req.param("file"));
     // get puml file if exists
@@ -29,7 +29,7 @@ router.get('/getsvgfromfile',  (req, res, next) => {
         var puml_file_stats = fs.statSync(full_file_path );
     } catch (e) {
         res.status(404)
-        res.send("KO, file not exists"); 
+        res.json({code:"NOT_FOUND", msg:"file not found"}); 
         return;
     } 
     // only launch puml-> svg generation if file is old.
@@ -47,10 +47,10 @@ router.get('/getsvgfromfile',  (req, res, next) => {
     }
     if ( should_generate || req.param("force")) {
         // FYI, context of execution is root path of script.
-        exec('java -jar plant/plantuml.jar -tsvg -o '+path.join(global.appRoot, "svgs")+' ' + full_file_path, (err, stdout, stderr) => {
+        exec('java -jar plant/plantuml.jar -tsvg -o '+path.join(global.appRoot, "svgs")+' "' + full_file_path+'"', (err, stdout, stderr) => {
             if (err) {
                 res.status(500)
-                res.json(err);
+                res.json({code:"PUML_ERROR", msg:"Generation failed"}); 
                 return;
             }
             let imgname =req.param("file").replace(/\.[^/.]+$/, ".svg")
@@ -96,7 +96,8 @@ router.get('/searchsd',  (req, res, next) => {
     var target_adapter = adapter_list[req.param("adapter").toLowerCase()];
     if ( ! target_adapter ){
         res.status(404)
-        res.json({ msg : "Could not determine adapter under platform/"});
+        res.json({code:"NOT_FOUND", msg:"Adaptor not found " + req.param("adapter")}); 
+        //res.json({ msg : "Could not determine adapter under platform/"});
         return;
     }
     // 
@@ -107,7 +108,7 @@ router.get('/searchsd',  (req, res, next) => {
             search_path = path.join(target_adapter.path, target_adapter.name + "_APIs");
             if ( ! fs.statSync(path.join(global.repoRoot,search_path)) ) {
                 res.status(404)
-                res.json({ msg : "Path to APIs not found"});
+                res.json({code:"NOT_FOUND", msg:"Adaptor API path not found (" + search_path +")"}); 
                 return;
             }
             filepattern = [ target_adapter.name, "API", req.param("verb"), req.param("ref")].join("_") + "_";
@@ -128,7 +129,7 @@ router.get('/searchsd',  (req, res, next) => {
             search_path = path.join(target_adapter.path, target_adapter.name + "_MQ_processing");
             if ( ! fs.statSync(path.join(global.repoRoot,search_path)) ) {
                 res.status(404)
-                res.json({ msg : "Path to APIs not found"});
+                res.json({code:"NOT_FOUND", msg:"Adaptor API path not found (" + search_path +")"}); 
                 return;
             }        
             filepattern = [ target_adapter.name, "MQ", req.param("ref")].join("_") + "_";
@@ -148,7 +149,7 @@ router.get('/searchsd',  (req, res, next) => {
             break;
         default : 
             res.status(400)
-            res.json({ msg : "wrong type"});
+            res.json({code:"INVALID", msg:"wrong type"}); 
             return;
     }
 
@@ -186,45 +187,5 @@ var readdir = function(dir) {
     });
     return direlems;
 }    
-/*
-var walk = function(dir,parent_dir,dirname) {
-    var cur_dir = {
-        path : parent_dir,
-        name : dirname,
-        children : []
-    }
-    var list = fs.readdirSync(dir);
-    list.forEach(function(file) {
-        var fullpath = dir + '/' + file;
-        var stat = fs.statSync(fullpath);
-        if (stat && stat.isDirectory()) { 
-            var subdir_info;
-            // Recurse into a subdirectory 
-            subdir_info = walk(fullpath,dir, file);
-            cur_dir.children.push(subdir_info);
-        }
-    });
-    return cur_dir;
-}    
-function dirTree(filename) {
-    var stats = fs.lstatSync(filename),
-        info = {
-            path: filename,
-            name: path.basename(filename)
-        };
 
-    if (stats.isDirectory()) {
-        info.type = "folder";
-        info.children = fs.readdirSync(filename).map(function(child) {
-            return dirTree(filename + '/' + child);
-        });
-    } else {
-        // Assuming it's a file. In real life it could be a symlink or
-        // something else!
-        info.type = "file";
-    }
-
-    return info;
-}
-*/
 module.exports = router;

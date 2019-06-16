@@ -1,4 +1,20 @@
 
+document.addEventListener('keydown', (event) => {
+    if (event.key == "Escape") toggleBrowser();
+});
+  
+function toggleBrowser(){
+    (document.getElementById('browser_active').style.display=='none') ? showBrowser(): hideBrowser();
+}
+function hideBrowser(){
+    document.getElementById('browser_active').style.display='none';
+    document.getElementById('browser_inactive').style.display='block';    
+}
+function showBrowser(){
+    document.getElementById('browser_active').style.display='block';
+    document.getElementById('browser_inactive').style.display='none';    
+}
+
 function kAlert(code, msg){
     document.getElementById("alert_code").innerText = code;
     document.getElementById("alert_msg").innerText = msg;
@@ -26,6 +42,7 @@ window.onhashchange = async function(){
                     kAlert("","Could not find any match");
 
                 } else {
+                    choseAmongProposition(res.results);
                     kNotify("","Several possibilities");
                 }
                 console.log(res);
@@ -33,7 +50,6 @@ window.onhashchange = async function(){
         case 'searchMq'  :
             break;
     }
-
 };
 // handle URL change, and trigger XHR
 function processhref(in_href){
@@ -61,6 +77,28 @@ function formatParams( params ){
 }
 
 /********************* */
+function choseAmongProposition(in_files){
+    document.getElementById("menu").style.display="block";
+    var menu_content_el= document.getElementById("menu_content");
+    menu_content_el.innerHTML="";
+
+    in_files.forEach(file => {
+        var li_el = document.createElement("li");
+        li_el.classList.add("file");
+        li_el.appendChild(document.createTextNode(file.filename));
+        menu_content_el.appendChild(li_el);
+        if (file.type == "puml"){
+            li_el.classList.add("puml");
+            li_el.addEventListener("click", function(e){
+                e.stopPropagation();
+                renderPuml(file);
+            });
+        }
+    });    
+
+}
+
+/********************* */
 function APICall( in_api, in_params, in_notjson) {
     return new Promise((resolve, reject) => {
         if ( !in_params ) {
@@ -78,8 +116,12 @@ function APICall( in_api, in_params, in_notjson) {
                     resolve( in_notjson ?  req.responseText : JSON.parse(req.responseText));
                 } else {
                     console.warn("Call failed to " + in_api + " with " + JSON.stringify(in_params, true));
-                    kAlert("ERR("+req.status+")","Failed to execute " );
-
+                    try{
+                        let err = JSON.parse(req.responseText)
+                        kAlert(err.code,err.msg );
+                    } catch(e){
+                        kAlert("INTERNAL","Error" );
+                    }
                     reject();
                 }
             }
@@ -149,9 +191,18 @@ async function renderPuml (in_file){
 }
 
 /********************* */
+function getLoadingImg(in_size){
+    var i = document.createElement("img");
+    i.classList.add("loading");
+    if (in_size){ i.style.width="in_size" +"px";}
+    return i;
+}
+/********************* */
 async function refreshPuml (in_file, target_el){
     try {
-        target_el.innerHTML="<img src='loading.gif'>";
+
+        target_el.innerHTML="";
+        target_el.appendChild(getLoadingImg());
         var svgdata = await APICall("getsvgfromfile",{file : in_file.filename, dir : in_file.path, force :true }, true);
         target_el.innerHTML = svgdata;
         }
@@ -195,9 +246,7 @@ function createTab(in_file, in_tab_id){
 
     // Will hold svg image
     var content_svg_el = document.createElement("div");
-    var loading = document.createElement("img");
-    loading.src = "loading.gif";
-    content_svg_el.appendChild(loading);
+    content_svg_el.appendChild(getLoadingImg());
 
     // Header to force reload
     var content_refresh_el = document.createElement("div");
@@ -236,13 +285,6 @@ function selectTab(in_tab_id, evt){
     if (evt) {
         evt.currentTarget.className += " active";
     }
-}
-
-
-/********************* */
-function toggleBrowser( mode ){
-    document.getElementById("browser_reduced").style.display = mode ? "none" : "table-cell";
-    document.getElementById("browser").style.display = mode ? "table-cell" : "none";
 }
 
 /********************* */

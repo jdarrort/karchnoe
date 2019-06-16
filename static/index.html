@@ -3,12 +3,53 @@
         <title>KARCH - NEO</title>
         <script src="karch.js" type="text/javascript"></script>
         <style>
-        ul      { list-style-type: none;  margin-left: 15px;  padding:0px;border:0px;}
-        li      { background-color:white;font-weight: normal}
-        li:hover{ background-color:azure}
-        li.file { padding-left : 20px;cursor:default;}
-        li.puml { cursor:pointer;}
-        li.dir  { font-weight : bold;  cursor:pointer;}
+
+#browser{
+  position : fixed;
+  top:30px;
+  left:0px;
+  background-color: #d2e3fb;
+  z-index: 5;
+  border:black solid 1px;
+}
+#browser_active{
+  min-width: 350px;
+}
+#content_el{
+  position : absolute;
+  left: 30px;
+  top : 30px;
+  width:100%;
+
+}
+#tab_root_el{
+  z-index: 50;
+  position: fixed;
+  top:0px;
+  width:100%;
+}
+img.loading{
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  content:url('loading.gif');
+}
+#menu{
+  border:black solid 2px;
+  border-radius: 10%;
+  background-color: #91ec9d;
+    position: fixed;
+    top: 30%;
+    min-width: 350px;
+    left: 50%;
+}
+
+ul      { list-style-type: none;  margin-left: 15px;  padding:0px;border:0px;}
+li      { background-color: #d2e3fb;font-weight: normal}
+li:hover{ background-color:azure}
+li.file { padding-left : 20px;cursor:default;}
+li.puml { cursor:pointer;}
+li.dir  { font-weight : bold;  cursor:pointer;}
 /* Style the tab */
 .tab {
   overflow: hidden;
@@ -43,6 +84,7 @@
 /* Style the tab content */
 .tabcontent {
   display: none;
+  width:100%;
   padding: 6px 12px;
   border: 1px solid #ccc;
   border-top: none;
@@ -63,7 +105,7 @@
   color: black;
 }
 .closebtn {
-  margin-left: 15px;
+  margin-left: 10px;
   color: white;
   font-weight: bold;
   float: right;
@@ -79,6 +121,23 @@
         </style>
     </head>
     <body>
+      <div id="tab_root_el" class="tab"></div>
+      <div id="browser">
+        <div id=browser_active>
+            BROWSER
+            <span class="closebtn" style="background-color:black" onclick="hideBrowser()">&lt;</span> 
+            <hr>
+            <ul id="root_dir"></ul>
+
+        </div>
+        <div id=browser_inactive style="display:none"  onclick="showBrowser()">
+            <span class="closebtn" style="background-color:black">&gt;</span> 
+            B<br>R<br>O<br>W<br>S<br>E<br>R<br>
+          </div>
+      </div>
+      <div id="content_el"></div>
+
+<!--
         <table width="100%" border=1 cellspacing=0 cellpadding=0>
             <tr>
                 <td width="250" valign="top" id="browser" onclick="toggleBrowser(false)"> 
@@ -98,6 +157,7 @@
                 </td>
             </tr>
         </table>
+-->        
         <div class="infobox">
           <div class="alert" id="alert" style="display:none">
             <strong id="alert_code"></strong> 
@@ -110,5 +170,11 @@
             <span class="closebtn" onclick="this.parentElement.style.display='none';">&times;</span> 
           </div>        
         </div>
-    </body>
+        <div id="menu" style="display:none"> 
+           Chose among proposed filed :
+          <span class="closebtn" onclick="this.parentElement.style.display='none';">&times;</span> 
+          <hr>
+          <div><ul id="menu_content"></ul></div>
+        </div>
+  </body>
 </html>
