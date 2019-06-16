@@ -14,5 +14,6 @@ RUN apt-get update &&  apt-get -y install graphviz
 
 CMD [ "node", "index.js" ]
 
-# docker build -t karchnoe .
-# docker run  -d -p 9999:80 -v /opt/ACMS/kamereon-architecture-diagram/:/opt/karch/karch_repo --name karchnoe karchnoe
+# docker build -t jdarrort/karchnoe .
+# docker run -d -p 9999:80 -v /opt/ACMS/kamereon-architecture-diagram/:/opt/karch/karch_repo --name karchnoe jdarrort/karchnoe
+# docker run -d -p 8080:80 -v "/Users/py08053/OneDrive - Alliance/GIT-ACMS/kamereon-architecture-diagram":/opt/karch/karch_repo --name karchnoe jdarrort/karchnoe
