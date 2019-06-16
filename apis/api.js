@@ -40,7 +40,7 @@ router.get('/getsdfromfile',  (req, res, next) => {
         // continue
         console.log("no existing file, generate it");
     }
-    if ( should_generate) {
+    if ( should_generate || req.param("force")) {
         // FYI, context of execution is root path of script.
         exec('java -jar plant/plantuml.jar -tsvg -o '+path.join(global.appRoot, "svgs")+' ' + full_file_path, (err, stdout, stderr) => {
             if (err) {
