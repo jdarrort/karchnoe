@@ -87,9 +87,9 @@ async function renderDirContent( in_el, in_dir_path){
 /********************* */
 async function renderPuml (in_file){
     TAB_ID++;
-    var target_el = createTab(in_file, "tabid_"+TAB_ID);
+    var target_el = createTab(in_file, "tabid_"+TAB_ID).svg;
     try {
-        var svgdata = await APICall("getsdfromfile",{file : in_file.filename, dir : in_file.path}, true);
+        var svgdata = await APICall("getsvgfromfile",{file : in_file.filename, dir : in_file.path}, true);
         //var content_el = document.getElementById("content_el");
         target_el.innerHTML = svgdata;
         }
@@ -100,19 +100,32 @@ async function renderPuml (in_file){
     }
 }
 
+/********************* */
+async function refreshPuml (in_file, target_el){
+    try {
+        target_el.innerHTML="<img src='loading.gif'>";
+        var svgdata = await APICall("getsvgfromfile",{file : in_file.filename, dir : in_file.path, force :true }, true);
+        target_el.innerHTML = svgdata;
+        }
+    catch (e) {
+        console.error("Failed to retrieve svg for " + in_file.filename);
+        //content_el.innerHTML = "/!\\ Failed to load /!\\";
+        target_el.innerHTML = "/!\\ Failed to load /!\\";
+    }
+}
 
 /********************* */
 function createTab(in_file, in_tab_id){
     var tab_name = in_file.filename;
     var tab_ref = in_file.path +"/"+ in_file.filename;
+    // Check if tab already exists.
     let idx = Object.keys(LOADED_TABS).indexOf(tab_ref);
     if ( idx >= 0 ){
         // Already loaded
         selectTab(LOADED_TABS[tab_ref].tab_id, {currentTarget : LOADED_TABS[tab_ref].tab_but_el});
         return LOADED_TABS[tab_ref].tab_content_el;
     }
-
-    // Check if tab already exists.
+    // Create new Tab.
     var but_el = document.createElement("button");
     but_el.classList.add("tablinks");
     but_el.classList.add("active");
@@ -123,13 +136,33 @@ function createTab(in_file, in_tab_id){
     });
     but_el.addEventListener("dblclick", function(e){ 
         document.getElementById(in_tab_id).remove();
+        delete LOADED_TABS[tab_ref];
         e.currentTarget.remove();
     });
-
+    // Create tab Content
     var content_el = document.createElement("div");
     content_el.classList.add("tabcontent");
     content_el.id = in_tab_id;
-    document.getElementById("content_el").append(content_el);
+    document.getElementById("content_el").appendChild(content_el);
+
+    // Will hold svg image
+    var content_svg_el = document.createElement("div");
+    var loading = document.createElement("img");
+    loading.src = "loading.gif";
+    content_svg_el.appendChild(loading);
+
+    // Header to force reload
+    var content_refresh_el = document.createElement("div");
+    content_refresh_el.innerText = "(force SVG refresh)";
+    content_refresh_el.style.cursor = "pointer";
+    content_refresh_el.addEventListener('click', e => {
+        refreshPuml(in_file, content_svg_el);
+    })
+
+    content_el.appendChild(content_refresh_el);
+    content_el.appendChild(content_svg_el);
+
+    content_el.svg = content_svg_el;
 
     LOADED_TABS[tab_ref] = {
         tab_id : in_tab_id,

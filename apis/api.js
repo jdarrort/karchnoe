@@ -13,7 +13,12 @@ router.get('/browsedir',  (req, res, next) => {
 });
 
 /********************* */
-router.get('/getsdfromfile',  (req, res, next) => {
+/*
+- file : filename 
+- dir : path from karch_root
+- force (o) : force  regeneration of SVG
+ */
+router.get('/getsvgfromfile',  (req, res, next) => {
     // check if previously generated image exists.
     // if yes, check timestamp vs plantuml source, to see if update required.
     let imgname =req.param("file").replace(/\.[^/.]+$/, ".svg")
@@ -56,12 +61,79 @@ router.get('/getsdfromfile',  (req, res, next) => {
     }
 });
 
+
+
 /********************* */
+/*  Search a PUML file from reference
+- adapter : adapter 
+- type : api/MQ
+- verb (o) :  get/post/delete/... , only if api
+- ref : apiCode / eventCode
+ */
 router.get('/searchsd',  (req, res, next) => {
-    res.send("searchsd");
+    var adapt_dir_RE = /plt-[0-9]{3}[_|-](.*)$/
+    var adapter_list={};
+    var path_relative_to_repoRoot = "platform";
+
+    // build adapter List
+    var adapt_root_dir = path.join(global.repoRoot, "platform");
+    var list = fs.readdirSync(adapt_root_dir);
+    var matchs;
+    list.forEach( (file)  => {
+        var stat = fs.statSync(path.join(global.repoRoot,path_relative_to_repoRoot, file));
+        if (stat && stat.isDirectory()) { 
+            matchs = file.match(adapt_dir_RE);
+            if (matchs) {
+                adapter_list[ matchs[1].toLowerCase() ] = {
+                    name : matchs[1].toLowerCase(),
+                    path : path.join(path_relative_to_repoRoot,file)
+                };
+            }
+        }
+    });
+
+    //
+    var target_adapter = adapter_list[req.param("adapter").toLowerCase()];
+    if ( ! target_adapter ){
+        res.status(404)
+        res.json({ msg : "Could not determine adapter under platform/"});
+        return;
+    }
+    // 
+    var search_path, dir_content, filepattern,file_pattern_re;
+    var matchs = [];
+    switch (req.param("type").toLowerCase()){
+        case 'api' : 
+            search_path = path.join(target_adapter.path, target_adapter.name + "_APIs");
+            if ( ! fs.statSync(path.join(global.repoRoot,search_path)) ) {
+                res.status(404)
+                res.json({ msg : "Path to APIs not found"});
+                return;
+            }
+            filepattern = [ target_adapter.name, "API", req.param("verb"), req.param("ref")].join("_") + "_";
+            file_pattern_re = new RegExp("^" + filepattern, "i" );
+            dir_content = readdir(search_path);
+            dir_content.files.forEach ( f => {
+                if (f.filename.match(file_pattern_re)){
+                    // Found a matching file !
+                    matchs.push({dir : search_path, filename : f })
+                }
+            });
+            res.json({
+                count : matchs.length,
+                results : matchs
+            });
+            break;
+        case 'mq' : 
+            break;
+        default : 
+            res.status(400)
+            res.json({ msg : "wrong type"});
+            return;
+    }
+
+    //res.send("searchsd");
 });
-
-
 
 /* Browse a DIRECTORY */
 var readdir = function(dir) {
