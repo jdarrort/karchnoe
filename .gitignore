@@ -1,2 +1,3 @@
-karch_repo/*
+karch_repo
 svgs/*
+.DS_store

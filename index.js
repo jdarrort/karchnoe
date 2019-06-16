@@ -1,12 +1,20 @@
 /*
 ACV - KARCH 
+
+must create a dir named   "karch_repo" at the root of program.
+
+
+
 */
 const express = require('express')
 const path = require('path');
 var app = express();
 
 
-const C_SERVER_PORT = process.env["KARCH_PORT"] || 80 ;
+
+var port ;
+process.argv.forEach( (arg, i) => {let v = arg.match(/^--port=(.*)/); if (v) {port = v[1];}});
+const C_SERVER_PORT = process.env["KARCH_PORT"] || port || 80 ;
 const C_KARCH_REPO = "karch_repo" ; 
 
 global.appRoot = path.resolve(__dirname);

@@ -5,6 +5,10 @@ var path = require('path');
 const { exec } = require('child_process');
 
 
+const KRM_PLATFORM_ROOT = "platform"
+var KMR_ADAPTORS= {};
+
+
 /********************* */
 router.get('/browsedir',  (req, res, next) => {
     //var listfiles = fs.readdirSync(req.param("dir"));
@@ -64,55 +68,80 @@ router.get('/getsvgfromfile',  (req, res, next) => {
 
 
 /********************* */
-/*  Search a PUML file from reference
+/*  Search a PUML file from API reference
 - adapter : adapter 
-- type : api/MQ
-- verb (o) :  get/post/delete/... , only if api
+- verb  :  get/post/delete/... 
 - ref : apiCode / eventCode
  */
-router.get('/searchsd',  (req, res, next) => {
-    var adapt_dir_RE = /plt-[0-9]{3}[_|-](.*)$/
-    var adapter_list={};
-    var path_relative_to_repoRoot = "platform";
+router.get('/searchapi',  (req, res, next) => {
 
-    // build adapter List
-    var adapt_root_dir = path.join(global.repoRoot, "platform");
-    var list = fs.readdirSync(adapt_root_dir);
-    var matchs;
-    list.forEach( (file)  => {
-        var stat = fs.statSync(path.join(global.repoRoot,path_relative_to_repoRoot, file));
-        if (stat && stat.isDirectory()) { 
-            matchs = file.match(adapt_dir_RE);
-            if (matchs) {
-                adapter_list[ matchs[1].toLowerCase() ] = {
-                    name : matchs[1].toLowerCase(),
-                    path : path.join(path_relative_to_repoRoot,file)
-                };
-            }
+    // Get Target Adapter
+    var target_adapter = KMR_ADAPTORS[req.query.adapter.toLowerCase()];
+    if ( ! target_adapter ){
+        res.status(404)
+        res.json( {code:"NOT_FOUND", msg:"Adaptor not found " + req.query.adapter } ); 
+        return;
+    }
+    var search_path, dir_content, filepattern,file_pattern_re;
+    var matchs = [];
+    search_path = path.join(target_adapter.path, target_adapter.name + "_APIs");
+    try {
+        fs.statSync( path.join(global.repoRoot,search_path) );
+    } catch (e){
+        res.status(404)
+        res.json({code:"NOT_FOUND", msg:"Adaptor API path not found (" + search_path +")"}); 
+        return;
+    }
+    //  ==> "kxx_API_GET_myApiRe_"
+    filepattern = [ target_adapter.name, "API", req.query.verb, req.query.ref ].join("_") + "_";
+
+    file_pattern_re = new RegExp("^" + filepattern, "i" ); // case insensitive
+    dir_content = readdir(search_path);
+    dir_content.files.forEach ( f => {
+        if (f.filename.match(file_pattern_re)){
+            // Found a matching file !
+            matchs.push(f);
         }
     });
+    res.json({
+        count : matchs.length,
+        results : matchs
+    });
+});
 
-    //
-    var target_adapter = adapter_list[req.param("adapter").toLowerCase()];
+
+
+/********************* */
+/*  Search a PUML file from reference of MQ message
+- adapter : adapter 
+- ref : eventCode
+ */
+router.get('/searchmq',  (req, res, next) => {
+
+    // Get Target Adapter
+    var target_adapter = KMR_ADAPTORS[req.param("adapter").toLowerCase()];
     if ( ! target_adapter ){
         res.status(404)
         res.json({code:"NOT_FOUND", msg:"Adaptor not found " + req.param("adapter")}); 
         //res.json({ msg : "Could not determine adapter under platform/"});
         return;
     }
-    // 
     var search_path, dir_content, filepattern,file_pattern_re;
     var matchs = [];
     switch (req.param("type").toLowerCase()){
         case 'api' : 
             search_path = path.join(target_adapter.path, target_adapter.name + "_APIs");
-            if ( ! fs.statSync(path.join(global.repoRoot,search_path)) ) {
+            try {
+                fs.statSync(path.join(global.repoRoot,search_path));
+            } catch (e){
                 res.status(404)
                 res.json({code:"NOT_FOUND", msg:"Adaptor API path not found (" + search_path +")"}); 
                 return;
             }
+            //  ==> "kxx_API_GET_myApiRe_"
             filepattern = [ target_adapter.name, "API", req.param("verb"), req.param("ref")].join("_") + "_";
-            file_pattern_re = new RegExp("^" + filepattern, "i" );
+
+            file_pattern_re = new RegExp("^" + filepattern, "i" ); // case insensitive
             dir_content = readdir(search_path);
             dir_content.files.forEach ( f => {
                 if (f.filename.match(file_pattern_re)){
@@ -131,7 +160,7 @@ router.get('/searchsd',  (req, res, next) => {
                 res.status(404)
                 res.json({code:"NOT_FOUND", msg:"Adaptor API path not found (" + search_path +")"}); 
                 return;
-            }        
+            }
             filepattern = [ target_adapter.name, "MQ", req.param("ref")].join("_") + "_";
             file_pattern_re = new RegExp("^" + filepattern, "i" );
             dir_content = readdir(search_path);
@@ -157,14 +186,42 @@ router.get('/searchsd',  (req, res, next) => {
 });
 
 
-
 /** ******************************************** */
 /** ******************************************** */
 //          UTILITIES
 /** ******************************************** */
 /** ******************************************** */
 
-/* Browse a DIRECTORY */
+function buildAdaptorList(){
+    var adapt_dir_RE = /plt-[0-9]{3}[_|-](.*)$/
+    // build adapter List, stored in global Var.
+    console.log("Refreshing adaptorList");
+    var adapt_root_dir = path.join(global.repoRoot, KRM_PLATFORM_ROOT );
+    var list = fs.readdirSync(adapt_root_dir);
+    var matchs;
+    KMR_ADAPTORS = {};
+    list.forEach( (file)  => {
+        var stat = fs.statSync( path.join(adapt_root_dir, file) );
+        if ( stat && stat.isDirectory() ) { 
+            matchs = file.match(adapt_dir_RE);
+            if (matchs) {
+                KMR_ADAPTORS[ matchs[1].toLowerCase() ] = {
+                    name : matchs[1].toLowerCase(),
+                    path : path.join(KRM_PLATFORM_ROOT ,file)
+                };
+            }
+        }
+    });
+    setTimeout(buildAdaptorList, 60000);
+}
+
+// Load Adaptor list
+buildAdaptorList();
+
+
+
+
+/* Browse a DIRECTORY , non recursively, splitting dirs and files*/
 var readdir = function(dir) {
     var direlems={
         dirs : [],

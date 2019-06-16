@@ -27,30 +27,39 @@ function kNotify(code, msg){
 }
 
 
+/********************* */
 // handle URL change, and trigger XHR
 window.onhashchange = async function(){
+    if (!location.hash) {return;}
     console.log("Switching to " + location.hash)
     var opt = processhref(location.hash);
     var res
-    switch (opt.action){
-        case 'searchApi'  :
-            opt.params.type="api";
-                res = await APICall("searchsd", opt.params);
-                if (res.count == 1){
-                    renderPuml(res.results[0]);
-                } else if (res.count == 0) {
-                    kAlert("","Could not find any match");
+    try{
+        switch (opt.action){
+            case 'searchApi'  :
+                opt.params.type="api";
+                    res = await APICall("searchapi", opt.params);
+                    if (res.count == 1){
+                        renderPuml(res.results[0]);
+                    } else if (res.count == 0) {
+                        kAlert("","Could not find any match");
 
-                } else {
-                    choseAmongProposition(res.results);
-                    kNotify("","Several possibilities");
-                }
-                console.log(res);
-            break;
-        case 'searchMq'  :
-            break;
+                    } else {
+                        choseAmongProposition(res.results);
+                        kNotify("","Several possibilities");
+                    }
+                    console.log(res);
+                break;
+            case 'searchMq'  :
+                break;
+        }
+        document.getElementById('fakelink').click();
+    } catch (e) {
+        return;
     }
 };
+
+/********************* */
 // handle URL change, and trigger XHR
 function processhref(in_href){
     // Interpret path :
@@ -120,7 +129,7 @@ function APICall( in_api, in_params, in_notjson) {
                         let err = JSON.parse(req.responseText)
                         kAlert(err.code,err.msg );
                     } catch(e){
-                        kAlert("INTERNAL","Error" );
+                        kAlert("INTERNAL","Unhandled Error" );
                     }
                     reject();
                 }
@@ -132,7 +141,11 @@ function APICall( in_api, in_params, in_notjson) {
 
 /********************* */
 async function renderDirContent( in_el, in_dir_path){
-    var in_content = await APICall("browsedir",{dir : in_dir_path});
+    try{
+        var in_content = await APICall("browsedir",{dir : in_dir_path});
+    } catch (e) {
+        return;
+    }
 
     // render dirs
     in_content.dirs.forEach(dir => {
