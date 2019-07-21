@@ -1,4 +1,6 @@
-FROM timbru31/java-node
+
+#See Dockerfile.root for jdarrort/java-node-plant image build
+FROM jdarrort/java-node-plant
 
 RUN mkdir /opt/karch
 COPY package.json /opt/karch/
@@ -9,8 +11,6 @@ COPY plant/ /opt/karch/plant/
 
 WORKDIR /opt/karch
 RUN npm install
-# Install graphviz
-RUN apt-get update &&  apt-get -y install graphviz
 
 CMD [ "node", "index.js" ]
 

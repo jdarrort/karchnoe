@@ -4,14 +4,23 @@ var fs = require('fs');
 var path = require('path');
 const { exec } = require('child_process');
 
-
+const REFRESH_PUML_LIST_FREQUENCY = 10000;
 const KRM_PLATFORM_ROOT = "platform"
 var KMR_ADAPTORS= {};
+var PUML_FILES = [];
 
+var LAST_REFRESH_TIMESTAMP
+
+/********************* */
+router.get('/loadPUMLs',  (req, res, next) => {
+    loadPlatformPumls();
+    res.json(PUML_FILES);
+    
+});
 
 /********************* */
 router.get('/browsedir',  (req, res, next) => {
-    //var listfiles = fs.readdirSync(req.param("dir"));
+    shouldRefreshPumls();
     var listfiles  = readdir(req.param("dir"));
     res.json(listfiles);
 });
@@ -25,9 +34,10 @@ router.get('/browsedir',  (req, res, next) => {
 router.get('/getsvgfromfile',  (req, res, next) => {
     // check if previously generated image exists.
     // if yes, check timestamp vs plantuml source, to see if update required.
+    shouldRefreshPumls();
     let imgname =req.param("file").replace(/\.[^/.]+$/, ".svg");
 
-    var full_file_path = path.join(global.repoRoot,  req.param("dir"),  req.param("file"));
+    var full_file_path = path.join(global.repoRoot,  req.query.dir,  req.query.file);
     // get puml file if exists
     try {
         var puml_file_stats = fs.statSync(full_file_path );
@@ -51,12 +61,18 @@ router.get('/getsvgfromfile',  (req, res, next) => {
     }
     if ( should_generate || req.param("force")) {
         // FYI, context of execution is root path of script.
-        exec('java -jar plant/plantuml.jar -tsvg -o '+path.join(global.appRoot, "svgs")+' "' + full_file_path+'"', (err, stdout, stderr) => {
+        exec(' java -jar plant/plantuml.jar -tsvg -o '+path.join(global.appRoot, "svgs")+' "' + full_file_path+'"', (err, stdout, stderr) => {
             if (err) {
                 res.status(500)
                 res.json({code:"PUML_ERROR", msg:"Generation failed"}); 
                 return;
             }
+
+            // Create sym dir in /svgs/folder
+            // move produced file to that folder.
+            // fs.mkdirSync(  , {recursive:true}, 0o666)
+            // fs.rename( , )
+
             let imgname =req.param("file").replace(/\.[^/.]+$/, ".svg")
             res.sendFile(imgname, { root: "./svgs" });
         });
@@ -73,7 +89,7 @@ router.get('/getsvgfromfile',  (req, res, next) => {
 - verb  :  get/post/delete/... 
 - ref : apiCode / eventCode
  */
-router.get('/searchapi',  (req, res, next) => {
+router.get('/searchapiold',  (req, res, next) => {
 
     // Get Target Adapter
     var target_adapter = KMR_ADAPTORS[req.query.adapter.toLowerCase()];
@@ -85,6 +101,14 @@ router.get('/searchapi',  (req, res, next) => {
     var search_path, dir_content, filepattern,file_pattern_re;
     var matchs = [];
     search_path = path.join(target_adapter.path, target_adapter.name + "_APIs");
+    if (! fs.existsSync( path.join(global.repoRoot,search_path) ) ) {
+        search_path = path.join(target_adapter.path, target_adapter.name + "_apis");
+        if (! fs.existsSync( path.join(global.repoRoot,search_path) ) ) {
+            res.status(404)
+            res.json({code:"NOT_FOUND", msg:"Adaptor API path not found (" + search_path +")"}); 
+            return;
+        }
+    }
     try {
         fs.statSync( path.join(global.repoRoot,search_path) );
     } catch (e){
@@ -112,77 +136,36 @@ router.get('/searchapi',  (req, res, next) => {
 
 
 /********************* */
+/*  Search a PUML file from API reference
+- adapter : adapter 
+- verb  :  get/post/delete/... 
+- ref : apiCode / eventCode
+ */
+router.get('/searchapi',  (req, res, next) => {
+    shouldRefreshPumls();
+    var filepattern = [ req.query.adapter.toLowerCase(), "api", req.query.verb.toLowerCase(), req.query.ref.toLowerCase() ].join("_");
+    var matches = searchFilePattern(filepattern)  // Browse through PUML_FILES
+    // Group results by Folder ? 
+    res.json({
+        count : matches.length,
+        results : matches
+    });
+});
+
+
+/********************* */
 /*  Search a PUML file from reference of MQ message
 - adapter : adapter 
 - ref : eventCode
  */
 router.get('/searchmq',  (req, res, next) => {
-
-    // Get Target Adapter
-    var target_adapter = KMR_ADAPTORS[req.param("adapter").toLowerCase()];
-    if ( ! target_adapter ){
-        res.status(404)
-        res.json({code:"NOT_FOUND", msg:"Adaptor not found " + req.param("adapter")}); 
-        //res.json({ msg : "Could not determine adapter under platform/"});
-        return;
-    }
-    var search_path, dir_content, filepattern,file_pattern_re;
-    var matchs = [];
-    switch (req.param("type").toLowerCase()){
-        case 'api' : 
-            search_path = path.join(target_adapter.path, target_adapter.name + "_APIs");
-            try {
-                fs.statSync(path.join(global.repoRoot,search_path));
-            } catch (e){
-                res.status(404)
-                res.json({code:"NOT_FOUND", msg:"Adaptor API path not found (" + search_path +")"}); 
-                return;
-            }
-            //  ==> "kxx_API_GET_myApiRe_"
-            filepattern = [ target_adapter.name, "API", req.param("verb"), req.param("ref")].join("_") + "_";
-
-            file_pattern_re = new RegExp("^" + filepattern, "i" ); // case insensitive
-            dir_content = readdir(search_path);
-            dir_content.files.forEach ( f => {
-                if (f.filename.match(file_pattern_re)){
-                    // Found a matching file !
-                    matchs.push(f);
-                }
-            });
-            res.json({
-                count : matchs.length,
-                results : matchs
-            });
-            break;
-        case 'mq' : 
-            search_path = path.join(target_adapter.path, target_adapter.name + "_MQ_processing");
-            if ( ! fs.statSync(path.join(global.repoRoot,search_path)) ) {
-                res.status(404)
-                res.json({code:"NOT_FOUND", msg:"Adaptor API path not found (" + search_path +")"}); 
-                return;
-            }
-            filepattern = [ target_adapter.name, "MQ", req.param("ref")].join("_") + "_";
-            file_pattern_re = new RegExp("^" + filepattern, "i" );
-            dir_content = readdir(search_path);
-            dir_content.files.forEach ( f => {
-                if (f.filename.match(file_pattern_re)){
-                    // Found a matching file !
-                    matchs.push(f)
-                }
-            });
-            res.json({
-                count : matchs.length,
-                results : matchs
-            });
-
-            break;
-        default : 
-            res.status(400)
-            res.json({code:"INVALID", msg:"wrong type"}); 
-            return;
-    }
-
-    //res.send("searchsd");
+    var filepattern = [ req.query.adapter.toLowerCase(), "mq", req.query.ref.toLowerCase() ].join("_");
+    var matches = searchFilePattern(filepattern)  // Browse through PUML_FILES
+    // Group results by Folder ? 
+    res.json({
+        count : matches.length,
+        results : matches
+    });
 });
 
 
@@ -191,7 +174,17 @@ router.get('/searchmq',  (req, res, next) => {
 //          UTILITIES
 /** ******************************************** */
 /** ******************************************** */
-
+function searchFilePattern(in_pattern){
+    var matches = [];
+    // Browse through PUML_FILES
+    PUML_FILES.forEach( file => {
+        if (file.filename.toLowerCase().indexOf(in_pattern) >= 0 ) {
+            matches.push(file);
+        }
+    });
+    return matches
+}
+/*
 function buildAdaptorList(){
     var adapt_dir_RE = /plt-[0-9]{3}[_|-](.*)$/
     // build adapter List, stored in global Var.
@@ -214,10 +207,14 @@ function buildAdaptorList(){
     });
     setTimeout(buildAdaptorList, 60000);
 }
-
 // Load Adaptor list
 buildAdaptorList();
-
+*/
+function shouldRefreshPumls(){
+    if ( (Date.now()- LAST_REFRESH_TIMESTAMP) > REFRESH_PUML_LIST_FREQUENCY ) {
+        refreshPumlFiles();
+    }
+}
 
 
 
@@ -243,6 +240,39 @@ var readdir = function(dir) {
         }
     });
     return direlems;
-}    
+}
+
+var readPumlFiles = function(in_dir){
+    results = [];
+    let working_path = global.repoRoot;
+    var pumlRE = "^(?!_)(.*).puml$";
+    if (! fs.existsSync( path.join(working_path, in_dir) ) ) {
+        return false;
+    }
+    var dir_content = fs.readdirSync( path.join(working_path, in_dir));
+    dir_content.forEach(function(elem) {    
+        var stat = fs.statSync( path.join(working_path, in_dir,elem) );
+        if (stat && stat.isDirectory()) { 
+            results = results.concat( readPumlFiles( path.join(in_dir, elem) ));
+        } else {
+            //it is a file, chck if  (not_)*.puml
+            if (elem.match(pumlRE)){
+                results.push( {filename : elem, type : "puml", path : in_dir} );
+            }
+        }
+    });
+    //console.log("Nb puml in platform/ : " + results.length);
+    return results;
+}
+
+var refreshPumlFiles = function(){
+    PUML_FILES = readPumlFiles( KRM_PLATFORM_ROOT );
+    console.log("Loading PUMLS: " + PUML_FILES.length);
+    //setTimeout(refreshPumlFiles, REFRESH_PUML_LIST_FREQUENCY);
+    LAST_REFRESH_TIMESTAMP = Date.now(); 
+}
+
+// Init
+refreshPumlFiles();
 
 module.exports = router;

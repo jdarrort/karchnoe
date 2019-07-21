@@ -1,0 +1,5 @@
+FROM timbru31/java-node
+# Install graphviz
+RUN apt-get update &&  apt-get -y install graphviz
+
+# docker build -t jdarrort/java-node-plant .
