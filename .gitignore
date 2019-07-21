@@ -1,3 +1,4 @@
 karch_repo
 svgs/*
 .DS_store
+config/config.js

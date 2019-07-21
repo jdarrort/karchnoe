@@ -2,125 +2,8 @@
     <head>
         <title>KARCH - NEO</title>
         <script src="karch.js" type="text/javascript"></script>
-        <style>
+        <link rel='stylesheet'href='styles.css' type='text/css'/>
 
-#browser{
-  position : absolute;
-  top:30px;
-  left:0px;
-  background-color: #d2e3fb;
-  z-index: 5;
-  border:black solid 1px;
-}
-
-#browser_active{
-  min-width: 350px;
-}
-
-#content_el{
-  position : absolute;
-  left: 30px;
-  top : 30px;
-  width:100%;
-
-}
-#tab_root_el{
-  z-index: 50;
-  position: fixed;
-  top:0px;
-  width:100%;
-}
-img.loading{
-  display: block;
-  margin-left: auto;
-  margin-right: auto;
-  content:url('loading.gif');
-}
-#menu{
-  border:black solid 2px;
-  border-radius: 10%;
-  background-color: #91ec9d;
-    position: fixed;
-    top: 30%;
-    min-width: 350px;
-    left: 50%;
-}
-
-ul      { list-style-type: none;  margin-left: 15px;  padding:0px;border:0px;}
-li      { background-color: #d2e3fb;font-weight: normal}
-li:hover{ background-color:azure}
-li.file { padding-left : 20px;cursor:default;}
-li.puml { cursor:pointer;}
-li.dir  { font-weight : bold;  cursor:pointer;}
-/* Style the tab */
-.tab {
-  overflow: hidden;
-  border: 1px solid #ccc;
-  background-color: #f1f1f1;
-}
-
-/* Style the buttons inside the tab */
-.tab button {
-  background-color: inherit;
-  float: left;
-  border: none;
-  outline: none;
-  cursor: pointer;
-  padding: 7px 8px;
-  transition: 0.3s;
-  font-size: 12px;
-  border-bottom: black solid 2px;
-  border-right: black solid 1px;
-}
-
-/* Change background color of buttons on hover */
-.tab button:hover {
-  background-color: #ddd;
-}
-
-/* Create an active/current tablink class */
-.tab button.active {
-  background-color: #ccc;
-}
-
-/* Style the tab content */
-.tabcontent {
-  display: none;
-  width:100%;
-  padding: 6px 12px;
-  border: 1px solid #ccc;
-  border-top: none;
-}
-.infobox{
-  position:fixed;
-  top:20px;
-  right:10px;
-}
-.alert {
-  padding: 20px;
-  background-color: #f57970;
-  color: white;
-}
-.notif {
-  padding: 20px;
-  background-color: #91ec9d;
-  color: black;
-}
-.closebtn {
-  margin-left: 10px;
-  color: white;
-  font-weight: bold;
-  float: right;
-  font-size: 22px;
-  line-height: 20px;
-  cursor: pointer;
-  transition: 0.3s;
-}
-
-.closebtn:hover {
-  color: black;
-}
-        </style>
     </head>
     <body>
       <a href="#" id="fakelink" style="display:none"></a>
@@ -132,7 +15,7 @@ li.dir  { font-weight : bold;  cursor:pointer;}
             <span class="closebtn" style="background-color:black" onclick="hideBrowser()">&lt;</span> 
             <hr>
             <ul id="root_dir"></ul>
-
+            <ul><li onclick="logout()" style="cursor:pointer"><b>Logout</b></li></ul>
         </div>
         <div id=browser_inactive style="display:none"  onclick="showBrowser()">
             <span class="closebtn" style="background-color:black">&gt;</span> 
@@ -140,31 +23,10 @@ li.dir  { font-weight : bold;  cursor:pointer;}
           </div>
       </div>
       <div id="content_el"></div>
-
-<!--
-        <table width="100%" border=1 cellspacing=0 cellpadding=0>
-            <tr>
-                <td width="250" valign="top" id="browser" onclick="toggleBrowser(false)"> 
-                    BROWSER
-                    <hr>
-                    <ul id="root_dir"></ul>
-                </td>
-              <td width="25" style="background-color:black;display:none" id="browser_reduced" onclick="toggleBrowser(true)"> 
-                 > <br>
-                 ><br>
-                 ><br>
-              </td>
-              <td valign="top">
-                    <div class="tab" id="tab_root_el"></div>
-                    <hr>
-                    <div id="content_el"></div>
-                </td>
-            </tr>
-        </table>
--->        
+   
         <div class="infobox">
           <div class="alert" id="alert" style="display:none">
-            <strong id="alert_code"></strong> 
+            <strong id ="alert_code"></strong> 
             <span id="alert_msg"></span>
             <span class="closebtn" onclick="this.parentElement.style.display='none';">&times;</span> 
           </div>
@@ -179,6 +41,12 @@ li.dir  { font-weight : bold;  cursor:pointer;}
           <span class="closebtn" onclick="this.parentElement.style.display='none';">&times;</span> 
           <hr>
           <div><ul id="menu_content"></ul></div>
+        </div>
+        <div id="signin" style="display:none">
+          <a href="https://slack.com/oauth/authorize?scope=identity.basic&client_id=54930473732.703276485158">
+            <img alt="Sign in with Slack" height="40" width="172" 
+            src="https://platform.slack-edge.com/img/sign_in_with_slack.png" 
+            srcset="https://platform.slack-edge.com/img/sign_in_with_slack.png 1x, https://platform.slack-edge.com/img/sign_in_with_slack@2x.png 2x" /></a>
         </div>
   </body>
 </html>

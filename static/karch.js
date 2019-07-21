@@ -2,6 +2,7 @@
 document.addEventListener('keydown', (event) => {
     if (event.key == "Escape") toggleBrowser();
 });
+var AUTH_BEARER;
   
 function toggleBrowser(){
     (document.getElementById('browser_active').style.display=='none') ? showBrowser(): hideBrowser();
@@ -26,6 +27,52 @@ function kNotify(code, msg){
     document.getElementById("notif").style.display="block";
 }
 
+function logout(){
+    document.cookie = 'karch_session=; Max-Age=-99999999;';
+    window.location = window.location.origin;
+}
+
+async function handleAuthent( ) {
+    // Get bearer from Cookie and check if valid.
+    // Otherwise, prompt social login.
+    var session_bearer = false;
+
+    // Search within existing Cookies.
+    var cookies = document.cookie.split(";");
+    cookies.forEach(cookie => {
+        let cook = cookie.trim().split("=")
+        if (cook[0] == "karch_session"){
+            session_bearer = cook[1];
+        }
+    });
+    if ( session_bearer) {
+        console.log("Using karch_session from cookies");
+        try {
+            // check it
+            var reply = await AUTHCall("checksession", {karch_session : session_bearer})
+            if ( ! reply.ok ){
+                console.log("Invalid session_token");
+                throw new Error("Invalid session_token")
+            } else {
+                AUTH_BEARER = session_bearer;
+            }
+        } catch (e) {
+            console.log("session token from cookie" +e.message);
+            session_bearer = false;
+            document.cookie = 'karch_session=; Max-Age=-99999999;';
+        }
+    }
+
+    if (session_bearer){
+        document.getElementById("browser").style.display="block";
+        document.getElementById("signin").style.display="none";
+        renderDirContent(document.getElementById("root_dir"), ".");
+    } else {
+        document.getElementById("signin").style.display="block";
+        document.getElementById("browser").style.display="none";
+    }
+    return;
+}
 
 /********************* */
 // handle URL change, and trigger XHR
@@ -108,7 +155,21 @@ function choseAmongProposition(in_files){
 }
 
 /********************* */
-function APICall( in_api, in_params, in_notjson) {
+function getBearer() {
+    var bearer = false;
+    // Search within existing Cookies.
+    var cookies = document.cookie.split(";");
+    cookies.forEach(cookie => {
+        let cook = cookie.trim().split("=")
+        if (cook[0] == "karch_session"){
+            bearer = cook[1];
+        }
+    });
+    return bearer;
+}
+function AUTHCall( in_api, in_params, in_notjson) {return  XXXCall("auth",in_api, in_params, in_notjson )}
+function APICall( in_api, in_params, in_notjson) { return XXXCall("api",in_api, in_params, in_notjson )}
+function XXXCall(in_type, in_api, in_params, in_notjson) {
     return new Promise((resolve, reject) => {
         if ( !in_params ) {
             in_params = {}
@@ -116,14 +177,23 @@ function APICall( in_api, in_params, in_notjson) {
         var uri_params = formatParams(in_params);
 
         var req = new XMLHttpRequest();
-        req.open('GET',ROOT_URI + "api/" + in_api + uri_params, true);
+        req.open('GET',ROOT_URI + in_type +"/" + in_api + uri_params, true);
         req.setRequestHeader('X-Requested-With', 'XHR');
+        var bearer = getBearer();
+        req.setRequestHeader('Authorization', 'Bearer ' + bearer?bearer:"");
         
         req.onreadystatechange = function () {
             if (req.readyState == 4) {
                 if (req.status == 200) {
                     resolve( in_notjson ?  req.responseText : JSON.parse(req.responseText));
-                } else {
+                } 
+                else if (req.status == 403) {
+                    // need to reauthentify, cause token is invalid.
+                    AUTH_BEARER =null;
+                    document.cookie = 'karch_session=; Max-Age=-99999999;';
+                    handleAuthent();
+                }
+                else {
                     console.warn("Call failed to " + in_api + " with " + JSON.stringify(in_params, true));
                     try{
                         let err = JSON.parse(req.responseText)
@@ -152,7 +222,7 @@ async function renderDirContent( in_el, in_dir_path){
         var li_el = document.createElement("li");
         li_el.classList.add("dir");
         var dir_img_el = document.createElement("img");
-        dir_img_el.src="dir.gif";
+        dir_img_el.src="img/dir.gif";
         dir_img_el.style.paddingRight="4px";
         li_el.appendChild(dir_img_el);
         li_el.appendChild(document.createTextNode(dir.dirname));
@@ -304,11 +374,12 @@ function selectTab(in_tab_id, evt){
 /********************* */
 /********************* */
 /********************* */
-var ROOT_URI = document.baseURI.replace(/#.*/,"");
+var ROOT_URI = window.location.origin +"/";
+//var ROOT_URI = document.baseURI.replace(/#.*/,"").replace(/\?.*/,"");
 var TAB_ID = 0;
 var LOADED_TABS = {};
 window.onload = async function(){
-	var root_dir_el = document.getElementById("root_dir");
-    renderDirContent(root_dir_el, ".");
+    //handleAuthent()
+    renderDirContent(document.getElementById("root_dir"), ".");
     console.log(root_dir);
 }
