@@ -6,7 +6,9 @@ RUN mkdir /opt/karch
 COPY package.json /opt/karch/
 COPY index.js /opt/karch/
 COPY static/ /opt/karch/static/
+COPY config/ /opt/karch/config/
 COPY apis/ /opt/karch/apis/
+COPY lib/ /opt/karch/lib/
 COPY plant/ /opt/karch/plant/
 
 WORKDIR /opt/karch
