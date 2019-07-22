@@ -4,7 +4,7 @@ const CONFIG= {
     AUTH : {
         DISABLE : false, // set it to true for no AUTH at all.
         SLACK : {
-            path : "https://slack.com/api/oauth.access?",
+            path : "https://a-cms.slack.com/api/oauth.access?",
             client_id :  "GIVE_IT",
             client_secret: "GIVE_IT",
             redirect_uri: "GIVE_IT"
