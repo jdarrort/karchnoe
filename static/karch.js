@@ -9,11 +9,11 @@ function toggleBrowser(){
 }
 function hideBrowser(){
     document.getElementById('browser_active').style.display='none';
-    document.getElementById('browser_inactive').style.display='block';    
+    //document.getElementById('browser_inactive').style.display='block';    
 }
 function showBrowser(){
     document.getElementById('browser_active').style.display='block';
-    document.getElementById('browser_inactive').style.display='none';    
+    //document.getElementById('browser_inactive').style.display='none';    
 }
 
 function kAlert(code, msg){
