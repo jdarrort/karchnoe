@@ -113,11 +113,13 @@ body{
     position:fixed;
     top:20px;
     right:10px;
+    z-index:200;
   }
   .alert {
     padding: 20px;
     background-color: #f57970;
     color: white;
+    z-index:200;
   }
   .notif {
     padding: 20px;

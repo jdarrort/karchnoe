@@ -40,7 +40,7 @@ app.use( "/api",
             next();
         }
         else {
-            res.status(403).send("Not authorized");
+            res.status(401).send("Not authorized");
         }
     },
     // If security OK, process.

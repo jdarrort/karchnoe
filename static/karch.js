@@ -187,7 +187,7 @@ function XXXCall(in_type, in_api, in_params, in_notjson) {
                 if (req.status == 200) {
                     resolve( in_notjson ?  req.responseText : JSON.parse(req.responseText));
                 } 
-                else if (req.status == 403) {
+                else if (req.status == 401) {
                     // need to reauthentify, cause token is invalid.
                     AUTH_BEARER =null;
                     document.cookie = 'karch_session=; Max-Age=-99999999;';
@@ -277,7 +277,7 @@ async function renderPuml (in_file){
 function getLoadingImg(in_size){
     var i = document.createElement("img");
     i.classList.add("loading");
-    if (in_size){ i.style.width="in_size" +"px";}
+    if (in_size){ i.style.width= in_size + "px";}
     return i;
 }
 /********************* */
