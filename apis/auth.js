@@ -16,8 +16,6 @@ router.get('/checksession',  (req, res, next) => {
     }
 });
 router.get('/fromslack',  (req, res, next) => {
-    var slack_code = req.param("code");
-
     var query_params ={};
     query_params.code= req.param("code");
     query_params.client_id = CONFIG.AUTH.SLACK.client_id;
@@ -70,10 +68,10 @@ router.get('/fromslack',  (req, res, next) => {
 router.get('/fromslack2',  (req, res, next) => {
     var query_params ={};
     query_params.code= req.param("code");
-    query_params.client_id = CONFIG.AUTH.SLACK.client_id;
-    query_params.client_secret = CONFIG.AUTH.SLACK.client_secret;
-    query_params.redirect_uri = CONFIG.AUTH.SLACK.redirect_uri;
-    var slack_path = CONFIG.AUTH.SLACK.path ;
+    query_params.client_id      = CONFIG.AUTH.SLACK.client_id;
+    query_params.client_secret  = CONFIG.AUTH.SLACK.client_secret;
+    query_params.redirect_uri   = CONFIG.AUTH.SLACK.redirect_uri;
+    var slack_path              = CONFIG.AUTH.SLACK.path ;
     Object.keys(query_params).forEach( k =>{
         slack_path += k + "=" + encodeURI(query_params[k]) + "&";
     });
