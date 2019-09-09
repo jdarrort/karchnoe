@@ -81,6 +81,23 @@ router.get('/getsvgfromfile',  (req, res, next) => {
     }
 });
 
+/********************* */
+/*
+- file : filename 
+- dir : path from karch_root
+ */
+router.get('/getmdfile',  (req, res, next) => {
+    var full_file_path = path.join(global.repoRoot,  req.query.dir,  req.query.file);
+    // get puml file if exists
+    try {
+        var puml_file_stats = fs.statSync(full_file_path );
+    } catch (e) {
+        res.status(404)
+        res.json({code:"NOT_FOUND", msg:"file not found"}); 
+        return;
+    } 
+    res.sendFile(full_file_path);
+});
 
 
 /********************* */

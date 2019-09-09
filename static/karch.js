@@ -265,12 +265,21 @@ async function renderDirContent( in_el, in_dir_path){
         li_el.classList.add("file");
         li_el.appendChild(document.createTextNode(file.filename));
         in_el.appendChild(li_el);
-        if (file.type == "puml"){
-            li_el.classList.add("puml");
-            li_el.addEventListener("click", function(e){
-                e.stopPropagation();
-                renderPuml(file);
-            });
+        switch (file.type) {
+            case "puml" :
+                li_el.classList.add("puml");
+                li_el.addEventListener("click", function(e){
+                    e.stopPropagation();
+                    renderPuml(file);
+                });
+                break;
+            case "md" :
+                li_el.classList.add("md");
+                li_el.addEventListener("click", function(e){
+                    e.stopPropagation();
+                    renderMd(file);
+                });
+                break;
         }
     });
 }
@@ -291,6 +300,24 @@ async function renderPuml (in_file){
     }
 }
 
+/********************* */
+async function renderMd (in_file){
+    TAB_ID++;
+    var target_el = createTab(in_file, "tabid_"+TAB_ID).svg;
+    try {
+        var md_data = await APICall("getmdfile",{file : in_file.filename, dir : in_file.path}, true);
+        //var content_el = document.getElementById("content_el");
+        var converter = new showdown.Converter(),
+        html = converter.makeHtml(md_data);
+        target_el.innerHTML = html;
+
+        }
+    catch (e) {
+        console.error("Failed to retrieve MD");
+        //content_el.innerHTML = "/!\\ Failed to load /!\\";
+        target_el.innerHTML = "/!\\ Failed to load /!\\";
+    }
+}
 /********************* */
 function getLoadingImg(in_size){
     var i = document.createElement("img");
@@ -395,6 +422,7 @@ function selectTab(in_tab_id, evt){
         });        
     }
 }
+
 
 /********************* */
 /********************* */
