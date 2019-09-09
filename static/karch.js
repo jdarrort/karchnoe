@@ -2,6 +2,10 @@
 document.addEventListener('keydown', (event) => {
     if (event.key == "Escape") toggleBrowser();
 });
+document.addEventListener('keydown', (event) => {
+    if (event.key == "r") {G_CURRENT_TAB.refresh();}
+});
+
 var AUTH_BEARER;
   
 function toggleBrowser(){
@@ -326,6 +330,8 @@ function createTab(in_file, in_tab_id){
     but_el.classList.add("tablinks");
     but_el.classList.add("active");
     but_el.innerText = tab_name;
+    but_el.ref = tab_ref;
+
     document.getElementById("tab_root_el").appendChild(but_el);
     but_el.addEventListener("click", function(e){ 
         selectTab(in_tab_id, e);
@@ -340,7 +346,6 @@ function createTab(in_file, in_tab_id){
     content_el.classList.add("tabcontent");
     content_el.id = in_tab_id;
     document.getElementById("content_el").appendChild(content_el);
-
     // Will hold svg image
     var content_svg_el = document.createElement("div");
     content_svg_el.appendChild(getLoadingImg());
@@ -360,8 +365,10 @@ function createTab(in_file, in_tab_id){
 
     LOADED_TABS[tab_ref] = {
         tab_id : in_tab_id,
+        tab_ref : tab_ref,
         tab_but_el : but_el,
-        tab_content_el : content_el
+        tab_content_el : content_el,
+        refresh : () => {refreshPuml(in_file, content_svg_el);}
     };
     selectTab(in_tab_id, {currentTarget : but_el});
     return content_el;
@@ -381,6 +388,11 @@ function selectTab(in_tab_id, evt){
     document.getElementById(in_tab_id).style.display = "block";
     if (evt) {
         evt.currentTarget.className += " active";
+        Object.keys(LOADED_TABS).forEach ( tref => {
+            if (LOADED_TABS[tref].tab_id == in_tab_id) {
+                G_CURRENT_TAB = LOADED_TABS[tref];
+            }
+        });        
     }
 }
 
@@ -392,6 +404,7 @@ var ROOT_URI = window.location.origin +"/";
 //var ROOT_URI = document.baseURI.replace(/#.*/,"").replace(/\?.*/,"");
 var TAB_ID = 0;
 var LOADED_TABS = {};
+var G_CURRENT_TAB;
 window.onload = async function(){
     //handleAuthent()
     renderDirContent(document.getElementById("root_dir"), ".");
