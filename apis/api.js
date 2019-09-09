@@ -3,6 +3,7 @@ var router = require('express').Router();
 var fs = require('fs');
 var path = require('path');
 const { exec } = require('child_process');
+const lineReader = require('line-reader');
 
 const REFRESH_PUML_LIST_FREQUENCY = 10000;
 const KRM_PLATFORM_ROOT = "platform"
@@ -60,6 +61,17 @@ router.get('/getsvgfromfile',  (req, res, next) => {
         console.log("no existing file, generate it");
     }
     if ( should_generate || req.param("force")) {
+
+        // We have an issue when puml explicit a filename : @startuml myOwnFile.puml
+        let startRE=/^\s*@startuml\s+(\S+)/
+        var shouldRenameFile=false;
+        lineReader.eachLine( full_file_path , function(line) {
+            if (startRE.test(line)) {
+                shouldRenameFile = line.match(startRE)[1];
+                return false; // stop reading
+            }
+        });
+
         // FYI, context of execution is root path of script.
         exec(' java -jar plant/plantuml.jar -tsvg -o '+path.join(global.appRoot, "svgs")+' "' + full_file_path+'"', (err, stdout, stderr) => {
             if (err) {
@@ -67,13 +79,16 @@ router.get('/getsvgfromfile',  (req, res, next) => {
                 res.json({code:"PUML_ERROR", msg:"Generation failed"}); 
                 return;
             }
-
+            let imgname =req.param("file").replace(/\.[^/.]+$/, ".svg")
+            if (shouldRenameFile !==false) {
+                console.log("Rename file todo");
+                fs.renameSync("./svgs/"+shouldRenameFile.replace(/\.[^/.]+$/, ".svg") , "./svgs/"+imgname);
+            }
             // Create sym dir in /svgs/folder
             // move produced file to that folder.
             // fs.mkdirSync(  , {recursive:true}, 0o666)
             // fs.rename( , )
 
-            let imgname =req.param("file").replace(/\.[^/.]+$/, ".svg")
             res.sendFile(imgname, { root: "./svgs" });
         });
     } else {

@@ -2,3 +2,4 @@ karch_repo
 svgs/*
 .DS_store
 config/config.js
+node_modules/*
