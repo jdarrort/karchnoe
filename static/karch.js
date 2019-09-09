@@ -35,7 +35,9 @@ function logout(){
     document.cookie = 'karch_session=; Max-Age=-99999999;';
     window.location = window.location.origin;
 }
-
+function signInWithSlack(){
+    window.location = "https://a-cms.slack.com/oauth/authorize?scope=identity.basic&client_id=54930473732.703276485158&state="+encodeURIComponent(location.hash);
+}
 async function handleAuthent( ) {
     // Get bearer from Cookie and check if valid.
     // Otherwise, prompt social login.
@@ -80,10 +82,11 @@ async function handleAuthent( ) {
 
 /********************* */
 // handle URL change, and trigger XHR
-window.onhashchange = async function(){
+manageLoactionChange = async function(){
     if (!location.hash) {return;}
     console.log("Switching to " + location.hash)
     var opt = processhref(location.hash);
+    hideBrowser();
     var res
     try{
         switch (opt.action){
@@ -123,6 +126,7 @@ window.onhashchange = async function(){
         return;
     }
 };
+window.onhashchange = manageLoactionChange;
 
 /********************* */
 // handle URL change, and trigger XHR
@@ -436,5 +440,6 @@ var G_CURRENT_TAB;
 window.onload = async function(){
     //handleAuthent()
     renderDirContent(document.getElementById("root_dir"), ".");
+    manageLoactionChange();
     console.log(root_dir);
 }

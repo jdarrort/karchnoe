@@ -106,7 +106,9 @@ router.get('/fromslack2',  (req, res, next) => {
                 if (authReply.ok == true){
                     res.cookie('karch_session', LIBAUTH.getAccessToken(), { maxAge: 60*1000*120, httpOnly: false});
                 }
-                res.redirect('/');
+                // Added to redirect to right page 
+                res.redirect('/'+req.param("state") || "");
+                //res.redirect('/');
             } catch (e) {
               console.error(e.message);
             }

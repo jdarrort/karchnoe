@@ -6,8 +6,8 @@ const CONFIG= {
         SLACK : {
             path : "https://a-cms.slack.com/api/oauth.access?",
             client_id :  "GIVE_IT",
-            client_secret: "GIVE_IT",
-            redirect_uri: "GIVE_IT"
+            client_secret: "",
+            redirect_uri: "http://GIVE_IT/auth/fromslack2"
         }
     }
 }
