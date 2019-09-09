@@ -61,36 +61,42 @@ router.get('/getsvgfromfile',  (req, res, next) => {
         console.log("no existing file, generate it");
     }
     if ( should_generate || req.param("force")) {
+        try {
+            // We have an issue when puml explicit a filename : @startuml myOwnFile.puml
+            let startRE=/^\s*@startuml\s+(\S+)/
+            var shouldRenameFile=false;
+            lineReader.eachLine( full_file_path , function(line) {
+                if (startRE.test(line)) {
+                    shouldRenameFile = line.match(startRE)[1];
+                    return false; // stop reading
+                }
+            });
 
-        // We have an issue when puml explicit a filename : @startuml myOwnFile.puml
-        let startRE=/^\s*@startuml\s+(\S+)/
-        var shouldRenameFile=false;
-        lineReader.eachLine( full_file_path , function(line) {
-            if (startRE.test(line)) {
-                shouldRenameFile = line.match(startRE)[1];
-                return false; // stop reading
-            }
-        });
+            // FYI, context of execution is root path of script.
+            exec(' java -jar plant/plantuml.jar -tsvg -o '+path.join(global.appRoot, "svgs")+' "' + full_file_path+'"', (err, stdout, stderr) => {
+                if (err) {
+                    res.status(500)
+                    res.json({code:"PUML_ERROR", msg:"Generation failed"}); 
+                    return;
+                }
+                let imgname =req.param("file").replace(/\.[^/.]+$/, ".svg")
+                if (shouldRenameFile !==false) {
+                    console.log("Rename file todo");
+                    fs.renameSync("./svgs/"+shouldRenameFile.replace(/\.[^/.]+$/, ".svg") , "./svgs/"+imgname);
+                }
+                // Create sym dir in /svgs/folder
+                // move produced file to that folder.
+                // fs.mkdirSync(  , {recursive:true}, 0o666)
+                // fs.rename( , )
 
-        // FYI, context of execution is root path of script.
-        exec(' java -jar plant/plantuml.jar -tsvg -o '+path.join(global.appRoot, "svgs")+' "' + full_file_path+'"', (err, stdout, stderr) => {
-            if (err) {
-                res.status(500)
-                res.json({code:"PUML_ERROR", msg:"Generation failed"}); 
-                return;
-            }
-            let imgname =req.param("file").replace(/\.[^/.]+$/, ".svg")
-            if (shouldRenameFile !==false) {
-                console.log("Rename file todo");
-                fs.renameSync("./svgs/"+shouldRenameFile.replace(/\.[^/.]+$/, ".svg") , "./svgs/"+imgname);
-            }
-            // Create sym dir in /svgs/folder
-            // move produced file to that folder.
-            // fs.mkdirSync(  , {recursive:true}, 0o666)
-            // fs.rename( , )
+                res.sendFile(imgname, { root: "./svgs" });
+            }); 
+        } catch (e) {
+            res.status(500)
+            res.json({code:"PUML_ERROR", msg:"Generation failed"}); 
+            return;
+        }
 
-            res.sendFile(imgname, { root: "./svgs" });
-        });
     } else {
         res.sendFile(imgname, { root: "./svgs" });
     }

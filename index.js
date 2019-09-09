@@ -1,7 +1,7 @@
-/*
+/* ********************
 ACV - KARCH 
 must create a dir named   "karch_repo" at the root of program.
-*/
+******************** */
 const express = require('express')
 const path = require('path');
 var app = express();
@@ -48,9 +48,14 @@ app.use( "/api",
 );
 
 
+// Enrich res with specific methods
+app.use(function (error, req, res, next) {
+    res.status(500)
+    res.json( { code : "SERVER_ERROR", msg: "    " } ); 
 
+});
 
 // Start server
 app.listen(C_SERVER_PORT, function () {
-    console.log(' KARCH  listening on port ' + C_SERVER_PORT)
-})
+    console.log( 'KARCH  listening on port ' + C_SERVER_PORT )
+});
