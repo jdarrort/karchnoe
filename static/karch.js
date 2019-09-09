@@ -97,6 +97,20 @@ window.onhashchange = async function(){
                     }
                     console.log(res);
                 break;
+                case 'searchFile'  :
+                opt.params.type="api";
+                    res = await APICall("searchfile", opt.params);
+                    if (res.count == 1){
+                        renderPuml(res.results[0]);
+                    } else if (res.count == 0) {
+                        kAlert("","Could not find any match");
+
+                    } else {
+                        choseAmongProposition(res.results);
+                        kNotify("","Several possibilities");
+                    }
+                    console.log(res);
+                break;                
             case 'searchMq'  :
                 break;
         }

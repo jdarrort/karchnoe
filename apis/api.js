@@ -154,6 +154,21 @@ router.get('/searchapi',  (req, res, next) => {
 
 
 /********************* */
+/*  Search a PUML file from filename reference
+- filename : xxx     
+ */
+router.get('/searchfile',  (req, res, next) => {
+    shouldRefreshPumls();
+    var filepattern = req.query.filename.toLowerCase();
+    var matches = searchFilePattern(filepattern)  // Browse through PUML_FILES
+    // Group results by Folder ? 
+    res.json({
+        count : matches.length,
+        results : matches
+    });
+});
+
+/********************* */
 /*  Search a PUML file from reference of MQ message
 - adapter : adapter 
 - ref : eventCode
