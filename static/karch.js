@@ -11,14 +11,8 @@ var AUTH_BEARER;
 function toggleBrowser(){
     (document.getElementById('browser_active').style.display=='none') ? showBrowser(): hideBrowser();
 }
-function hideBrowser(){
-    document.getElementById('browser_active').style.display='none';
-    //document.getElementById('browser_inactive').style.display='block';    
-}
-function showBrowser(){
-    document.getElementById('browser_active').style.display='block';
-    //document.getElementById('browser_inactive').style.display='none';    
-}
+function hideBrowser(){     document.getElementById('browser_active').style.display='none';}
+function showBrowser(){     document.getElementById('browser_active').style.display='block';}
 
 function kAlert(code, msg){
     document.getElementById("alert_code").innerText = code;
@@ -38,7 +32,27 @@ function logout(){
 function signInWithSlack(){
     window.location = "https://a-cms.slack.com/oauth/authorize?scope=identity.basic&client_id=54930473732.703276485158&state="+encodeURIComponent(location.hash);
 }
-async function handleAuthent( ) {
+
+/********************* */
+function getBearer() {
+    var bearer = false;
+    // Search within existing Cookies.
+    var cookies = document.cookie.split(";");
+    cookies.forEach(cookie => {
+        let cook = cookie.trim().split("=")
+        if (cook[0] == "karch_session"){
+            bearer = cook[1];
+        }
+    });
+    return bearer;
+}
+async function askForAuthentication( ) {
+    document.getElementById("signin").style.display="block";
+    document.getElementById("browser").style.display="none";
+    return;
+}
+// To be deleted
+async function handleAuthentold( ) {
     // Get bearer from Cookie and check if valid.
     // Otherwise, prompt social login.
     var session_bearer = false;
@@ -79,8 +93,56 @@ async function handleAuthent( ) {
     }
     return;
 }
+function AUTHCall( in_api, in_params, in_notjson) {return  XXXCall("auth",in_api, in_params, in_notjson )}
+function APICall( in_api, in_params, in_notjson) { return XXXCall("api",in_api, in_params, in_notjson )}
+function XXXCall(in_type, in_api, in_params, in_notjson) {
+    return new Promise((resolve, reject) => {
+        if ( !in_params ) {
+            in_params = {}
+        };
+        var uri_params = formatParams(in_params);
+
+        var req = new XMLHttpRequest();
+        req.open('GET',ROOT_URI + in_type +"/" + in_api + uri_params, true);
+        req.setRequestHeader('X-Requested-With', 'XHR');
+        // Get Authorization Bearer
+        var bearer = getBearer();
+        req.setRequestHeader('Authorization', 'Bearer ' + bearer?bearer:"");
+        
+        req.onreadystatechange = function () {
+            if (req.readyState == 4) {
+                if (req.status == 200) {
+                    resolve( in_notjson ?  req.responseText : JSON.parse(req.responseText));
+                } 
+                else if (req.status == 401) {
+                    // need to reauthentify, cause token is invalid.
+                    AUTH_BEARER =null;
+                    document.cookie = 'karch_session=; Max-Age=-99999999;';
+                    askForAuthentication();
+                }
+                else {
+                    console.warn("Call failed to " + in_api + " with " + JSON.stringify(in_params, true));
+                    var err;
+                    try{
+                        err = JSON.parse(req.responseText)
+                        kAlert(err.code,err.msg );
+                    } catch(e){
+                        kAlert("INTERNAL","Unhandled Error" );
+                    }
+                    reject(err);
+                }
+            }
+        };
+        req.send();
+    })
+}
+
+
+
 cleanHash = function (){
     // Hint to clean location.hash. Drawback : navigates on top...
+    // Call only if current hash has something
+    if (location.hash.length >2)
     document.getElementById('fakelink').click();
 }
 /********************* */
@@ -179,61 +241,6 @@ function choseAmongProposition(in_files){
 
 }
 
-/********************* */
-function getBearer() {
-    var bearer = false;
-    // Search within existing Cookies.
-    var cookies = document.cookie.split(";");
-    cookies.forEach(cookie => {
-        let cook = cookie.trim().split("=")
-        if (cook[0] == "karch_session"){
-            bearer = cook[1];
-        }
-    });
-    return bearer;
-}
-function AUTHCall( in_api, in_params, in_notjson) {return  XXXCall("auth",in_api, in_params, in_notjson )}
-function APICall( in_api, in_params, in_notjson) { return XXXCall("api",in_api, in_params, in_notjson )}
-function XXXCall(in_type, in_api, in_params, in_notjson) {
-    return new Promise((resolve, reject) => {
-        if ( !in_params ) {
-            in_params = {}
-        };
-        var uri_params = formatParams(in_params);
-
-        var req = new XMLHttpRequest();
-        req.open('GET',ROOT_URI + in_type +"/" + in_api + uri_params, true);
-        req.setRequestHeader('X-Requested-With', 'XHR');
-        var bearer = getBearer();
-        req.setRequestHeader('Authorization', 'Bearer ' + bearer?bearer:"");
-        
-        req.onreadystatechange = function () {
-            if (req.readyState == 4) {
-                if (req.status == 200) {
-                    resolve( in_notjson ?  req.responseText : JSON.parse(req.responseText));
-                } 
-                else if (req.status == 401) {
-                    // need to reauthentify, cause token is invalid.
-                    AUTH_BEARER =null;
-                    document.cookie = 'karch_session=; Max-Age=-99999999;';
-                    handleAuthent();
-                }
-                else {
-                    console.warn("Call failed to " + in_api + " with " + JSON.stringify(in_params, true));
-                    var err;
-                    try{
-                        err = JSON.parse(req.responseText)
-                        kAlert(err.code,err.msg );
-                    } catch(e){
-                        kAlert("INTERNAL","Unhandled Error" );
-                    }
-                    reject(err);
-                }
-            }
-        };
-        req.send();
-    })
-}
 
 /********************* */
 async function renderDirContent( in_el, in_dir_path){
@@ -296,19 +303,24 @@ async function renderDirContent( in_el, in_dir_path){
 async function renderPuml (in_file){
     TAB_ID++;
     var target_el = createTab(in_file, "tabid_"+TAB_ID).svg;
+    refreshPuml(in_file, target_el);
+    cleanHash();
+}
+/********************* */
+async function refreshPuml (in_file, target_el){
     try {
-        var svgdata = await APICall("getsvgfromfile",{file : in_file.filename, dir : in_file.path}, true);
-        //var content_el = document.getElementById("content_el");
+
+        target_el.innerHTML="";
+        target_el.appendChild(getLoadingImg());
+        var svgdata = await APICall("getsvgfromfile",{file : in_file.filename, dir : in_file.path, force :true }, true);
         target_el.innerHTML = svgdata;
         }
     catch (e) {
-        console.error("Failed to retrieve puml");
+        console.error("Failed to retrieve svg for " + in_file.filename);
         //content_el.innerHTML = "/!\\ Failed to load /!\\";
-        target_el.innerHTML = "/!\\ Failed to load /!\\<br>" + e.msg;
+        target_el.innerHTML = "/!\\ Failed to load /!\\<br>" + e.detail;
     }
-    cleanHash();
 }
-
 /********************* */
 async function renderMd (in_file){
     TAB_ID++;
@@ -334,21 +346,7 @@ function getLoadingImg(in_size){
     if (in_size){ i.style.width= in_size + "px";}
     return i;
 }
-/********************* */
-async function refreshPuml (in_file, target_el){
-    try {
 
-        target_el.innerHTML="";
-        target_el.appendChild(getLoadingImg());
-        var svgdata = await APICall("getsvgfromfile",{file : in_file.filename, dir : in_file.path, force :true }, true);
-        target_el.innerHTML = svgdata;
-        }
-    catch (e) {
-        console.error("Failed to retrieve svg for " + in_file.filename);
-        //content_el.innerHTML = "/!\\ Failed to load /!\\";
-        target_el.innerHTML = "/!\\ Failed to load /!\\<br>" + e.msg;
-    }
-}
 
 /********************* */
 function createTab(in_file, in_tab_id){

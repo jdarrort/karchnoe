@@ -3,6 +3,7 @@ const CONFIG= {
     AT_PWD : "CHOSE A RANDOM PASSWORD FOR CRYPTING KARCHNOETOKEN",
     AUTH : {
         DISABLE : false, // set it to true for no AUTH at all.
+        AT_DURATION : 14400, //in sec
         SLACK : {
             path : "https://a-cms.slack.com/api/oauth.access?",
             client_id :  "GIVE_IT",

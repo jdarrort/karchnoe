@@ -142,8 +142,10 @@ body{
     color: black;
   }
   #signin {
+      z-index:2000;
       display: block;
-      left: 50%;
-      position: fixed;
       top: 30%;
+      left: 50%;
+      transform: translateX(-50%);
+      position: fixed;
   }

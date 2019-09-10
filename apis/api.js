@@ -76,7 +76,7 @@ router.get('/getsvgfromfile',  (req, res, next) => {
             exec(' java -jar plant/plantuml.jar -tsvg -o '+path.join(global.appRoot, "svgs")+' "' + full_file_path+'"', (err, stdout, stderr) => {
                 if (err) {
                     res.status(500)
-                    res.json({code:"PUML_ERROR", msg: err.message}); 
+                    res.json({code:"PUML_ERROR", msg:"Generation failed",detail: err.message}); 
                     return;
                 }
                 let imgname =req.param("file").replace(/\.[^/.]+$/, ".svg")
