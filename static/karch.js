@@ -220,13 +220,14 @@ function XXXCall(in_type, in_api, in_params, in_notjson) {
                 }
                 else {
                     console.warn("Call failed to " + in_api + " with " + JSON.stringify(in_params, true));
+                    var err;
                     try{
-                        let err = JSON.parse(req.responseText)
+                        err = JSON.parse(req.responseText)
                         kAlert(err.code,err.msg );
                     } catch(e){
                         kAlert("INTERNAL","Unhandled Error" );
                     }
-                    reject();
+                    reject(err);
                 }
             }
         };
@@ -303,7 +304,7 @@ async function renderPuml (in_file){
     catch (e) {
         console.error("Failed to retrieve puml");
         //content_el.innerHTML = "/!\\ Failed to load /!\\";
-        target_el.innerHTML = "/!\\ Failed to load /!\\";
+        target_el.innerHTML = "/!\\ Failed to load /!\\<br>" + e.msg;
     }
     cleanHash();
 }
@@ -345,7 +346,7 @@ async function refreshPuml (in_file, target_el){
     catch (e) {
         console.error("Failed to retrieve svg for " + in_file.filename);
         //content_el.innerHTML = "/!\\ Failed to load /!\\";
-        target_el.innerHTML = "/!\\ Failed to load /!\\";
+        target_el.innerHTML = "/!\\ Failed to load /!\\<br>" + e.msg;
     }
 }
 
