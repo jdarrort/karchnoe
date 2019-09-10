@@ -383,6 +383,7 @@ function createTab(in_file, in_tab_id){
     document.getElementById("content_el").appendChild(content_el);
     // Will hold svg image
     var content_svg_el = document.createElement("div");
+    content_svg_el.style.textAlign="center";
     content_svg_el.appendChild(getLoadingImg());
 
     // Header to force reload
