@@ -3,7 +3,7 @@ document.addEventListener('keydown', (event) => {
     if (event.key == "Escape") toggleBrowser();
 });
 document.addEventListener('keydown', (event) => {
-    if (event.key == "r") {G_CURRENT_TAB.refresh();}
+    if (event.key == "r") {G_CURRENT_TAB.refresh();cleanHash()}
 });
 
 var AUTH_BEARER;
@@ -79,7 +79,10 @@ async function handleAuthent( ) {
     }
     return;
 }
-
+cleanHash = function (){
+    // Hint to clean location.hash. Drawback : navigates on top...
+    document.getElementById('fakelink').click();
+}
 /********************* */
 // handle URL change, and trigger XHR
 manageLoactionChange = async function(){
@@ -95,6 +98,7 @@ manageLoactionChange = async function(){
                     res = await APICall("searchapi", opt.params);
                     if (res.count == 1){
                         renderPuml(res.results[0]);
+
                     } else if (res.count == 0) {
                         kAlert("","Could not find any match");
 
@@ -105,7 +109,6 @@ manageLoactionChange = async function(){
                     console.log(res);
                 break;
                 case 'searchFile'  :
-                opt.params.type="api";
                     res = await APICall("searchfile", opt.params);
                     if (res.count == 1){
                         renderPuml(res.results[0]);
@@ -121,7 +124,6 @@ manageLoactionChange = async function(){
             case 'searchMq'  :
                 break;
         }
-        document.getElementById('fakelink').click();
     } catch (e) {
         return;
     }
@@ -167,6 +169,7 @@ function choseAmongProposition(in_files){
         menu_content_el.appendChild(li_el);
         if (file.type == "puml"){
             li_el.classList.add("puml");
+            li_el.title = file.path;
             li_el.addEventListener("click", function(e){
                 e.stopPropagation();
                 renderPuml(file);
@@ -302,6 +305,7 @@ async function renderPuml (in_file){
         //content_el.innerHTML = "/!\\ Failed to load /!\\";
         target_el.innerHTML = "/!\\ Failed to load /!\\";
     }
+    cleanHash();
 }
 
 /********************* */
@@ -383,7 +387,7 @@ function createTab(in_file, in_tab_id){
 
     // Header to force reload
     var content_refresh_el = document.createElement("div");
-    content_refresh_el.innerText = "(force SVG refresh)";
+    content_refresh_el.innerText = "(hit 'r' to refresh)";
     content_refresh_el.style.cursor = "pointer";
     content_refresh_el.addEventListener('click', e => {
         refreshPuml(in_file, content_svg_el);

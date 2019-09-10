@@ -12,11 +12,9 @@
       KMR-Architecture
     </div>
   </div>
-
-      <a href="#" id="fakelink" style="display:none"></a>
-
-      <div id="tab_root_el" class="tab"></div>
-      <div id="browser">
+  <a href="#" id="fakelink" style="display:none"></a>
+  <div>
+    <div id="browser">
         <div id=browser_active>
             <b>BROWSER</b> <i>(hit ESC to show /hide)</i>
             <span class="closebtn" style="background-color:black" onclick="hideBrowser()">X</span> 
@@ -29,32 +27,36 @@
             B<br>R<br>O<br>W<br>S<br>E<br>R<br>
           </div>
           -->
+    </div>
+
+    <div id="infobox">
+      <div class="alert" id="alert" style="display:none">
+        <strong id ="alert_code"></strong> 
+        <span id="alert_msg"></span>
+        <span class="closebtn" onclick="this.parentElement.style.display='none';">&times;</span> 
       </div>
-      <div id="content_el"></div>
-   
-        <div class="infobox">
-          <div class="alert" id="alert" style="display:none">
-            <strong id ="alert_code"></strong> 
-            <span id="alert_msg"></span>
-            <span class="closebtn" onclick="this.parentElement.style.display='none';">&times;</span> 
-          </div>
-          <div class="notif" id="notif" style="display:none">
-            <strong id="notif_code"></strong> : 
-            <span id="notif_msg"></span>
-            <span class="closebtn" onclick="this.parentElement.style.display='none';">&times;</span> 
-          </div>        
-        </div>
-        <div id="menu" style="display:none"> 
-           Matching files :
-          <span class="closebtn" onclick="this.parentElement.style.display='none';">&times;</span> 
-          <hr>
-          <div><ul id="menu_content"></ul></div>
-        </div>
-        <div id="signin" style="display:none">
-          <a href="javascript:signInWithSlack()">
-            <img alt="Sign in with Slack" height="40" width="172" 
-            src="https://platform.slack-edge.com/img/sign_in_with_slack.png" 
-            srcset="https://platform.slack-edge.com/img/sign_in_with_slack.png 1x, https://platform.slack-edge.com/img/sign_in_with_slack@2x.png 2x" /></a>
-        </div>
+      <div class="notif" id="notif" style="display:none" onclick="this.style.display='none';">
+        <strong id="notif_code"></strong> 
+        <span id="notif_msg"></span>
+       <!-- <span class="closebtn">&times;</span> -->
+      </div>        
+    </div>
+    <div id="menu" style="display:none"> 
+      <b>Matching files :</b>
+      <span class="closebtn" onclick="this.parentElement.style.display='none';">&times;</span> 
+      <hr>
+      <div><ul id="menu_content"></ul></div>
+    </div>
+    <div id="signin" style="display:none">
+      <a href="javascript:signInWithSlack()">
+        <img alt="Sign in with Slack" height="40" width="172" 
+        src="https://platform.slack-edge.com/img/sign_in_with_slack.png" 
+        srcset="https://platform.slack-edge.com/img/sign_in_with_slack.png 1x, https://platform.slack-edge.com/img/sign_in_with_slack@2x.png 2x" /></a>
+    </div>
+  </div>  
+  <div id="root_body">
+    <div id="tab_root_el" class="tab"></div>
+    <div id="content_el"></div>
+  </div>
   </body>
 </html>
