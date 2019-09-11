@@ -215,11 +215,14 @@ function choseAmongProposition(in_files){
 
 /********************* */
 async function renderDirContent( in_el, in_dir_path){
+    in_el.appendChild(getLoadingImg(25) ); 
     try{
         var in_content = await APICall("browsedir",{dir : in_dir_path});
     } catch (e) {
+        in_el.innerHTML="<font color='red'><Failed to load dir content/font>"; ;
         return;
     }
+    in_el.innerHTML=""; ;
 
     // render dirs
     in_content.dirs.forEach(dir => {
@@ -272,7 +275,7 @@ async function renderDirContent( in_el, in_dir_path){
 
 /********************* */
 async function renderPuml (in_file){
-    getTab(in_file).setContentEl( getLoadingImg() );
+    getTab(in_file).setContentEl( getLoadingImg(30) );
     getTab(in_file).setContentHtml( await refreshPuml(in_file, true) );
     cleanHash();
 }
@@ -307,7 +310,7 @@ async function renderMd (in_file){
 function getLoadingImg(in_size){
     var i = document.createElement("img");
     i.classList.add("loading");
-    if (in_size){ i.style.width= in_size + "px";}
+    if (in_size){ i.style.width= in_size + "px";i.style.height= in_size + "px";}
     return i;
 }
 
@@ -337,7 +340,7 @@ function getTab(in_file){
         tab_svg_el : document.createElement("div"),
         scroll : 0,
         async refresh () {
-            this.setContentEl( getLoadingImg() );
+            this.setContentEl( getLoadingImg(30) );
             this.setContentHtml( await refreshPuml(this.file, false));
             this.scroll = 0;
         },
@@ -387,7 +390,7 @@ function getTab(in_file){
 
     // Will hold svg image
     NEW_TAB.tab_svg_el.style.textAlign="center";
-    NEW_TAB.setContentEl( getLoadingImg() );
+    NEW_TAB.setContentEl( getLoadingImg(30) );
     NEW_TAB.tab_content_el.appendChild(NEW_TAB.tab_svg_el);
 
     // when click on the tab button
