@@ -8,6 +8,8 @@ const CONFIG= {
             path : "https://a-cms.slack.com/api/oauth.access?",
             client_id :  "GIVE_IT",
             client_secret: "",
+            team_check : true, // wether team ID will be checked
+            team_id : "GIVE_IT", // Represents the ACMS TEAM the user
             redirect_uri: "http://GIVE_IT/auth/fromslack2"
         }
     }

@@ -1,0 +1,17 @@
+# SYSTEMD conf to autoStart service 
+# (systemctl enable karchnoe && systemctl start karchnoe)
+# Don t forget to replace the PATH and PORT to correct values
+
+[Unit]
+Description=ACV - KARCHNOE backend
+After=network.target
+ 
+[Service]
+Type=simple
+User=jdarrort
+WorkingDirectory=/opt/karchnoe
+ExecStart=/usr/bin/node /opt/karchnoe/index.js --port=8888
+Restart=on-failure
+ 
+[Install]
+WantedBy=multi-user.target

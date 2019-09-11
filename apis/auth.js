@@ -15,6 +15,7 @@ router.get('/checksession',  (req, res, next) => {
         res.send({ok : false});
     }
 });
+/*
 router.get('/fromslack',  (req, res, next) => {
     var query_params ={};
     query_params.code= req.param("code");
@@ -62,62 +63,79 @@ router.get('/fromslack',  (req, res, next) => {
         console.error(`Got error: ${e.message}`);
     });
 });
-
+*/
 
 /********************* */
 router.get('/fromslack2',  (req, res, next) => {
-    var query_params ={};
-    query_params.code= req.param("code");
-    query_params.client_id      = CONFIG.AUTH.SLACK.client_id;
-    query_params.client_secret  = CONFIG.AUTH.SLACK.client_secret;
-    query_params.redirect_uri   = CONFIG.AUTH.SLACK.redirect_uri;
-    var slack_path              = CONFIG.AUTH.SLACK.path ;
-    Object.keys(query_params).forEach( k =>{
-        slack_path += k + "=" + encodeURI(query_params[k]) + "&";
-    });
-
-    var authReply={};
-    // must check scope against SLACK
-    const slackreq = https.get(slack_path, (slack_reply) => {
-        const { statusCode } = slack_reply;
-        const contentType = slack_reply.headers['content-type'];
-        let error;
-        if (statusCode !== 200) {
-            error = new Error('Request Failed.\n' +
-                              `Status Code: ${statusCode}`);
-        } else if (!/^application\/json/.test(contentType)) {
-            error = new Error('Invalid content-type.\n' +
-                              `Expected application/json but received ${contentType}`);
-        }
-        if (error) {
-            console.error(error.message);
-            // Consume response data to free up memory
-            slack_reply.resume();
-            return;
-        }
-
-        slack_reply.setEncoding('utf8');
-        let rawData = '';
-        slack_reply.on('data', (chunk) => {rawData += chunk;});
-        slack_reply.on('end', () => {
-            try {
-                authReply = JSON.parse(rawData);
-                console.log(authReply);
-                if (authReply.ok == true){
-                    res.cookie('karch_session', LIBAUTH.getAccessToken(), { maxAge: 60*1000*120, httpOnly: false});
-                }
-                // Added to redirect to right page 
-                res.redirect('/'+req.param("state") || "");
-                //res.redirect('/');
-            } catch (e) {
-              console.error(e.message);
-            }
+    try {
+        var query_params ={};
+        query_params.code= req.params["code"];
+        query_params.client_id      = CONFIG.AUTH.SLACK.client_id;
+        query_params.client_secret  = CONFIG.AUTH.SLACK.client_secret;
+        query_params.redirect_uri   = CONFIG.AUTH.SLACK.redirect_uri;
+        var slack_path              = CONFIG.AUTH.SLACK.path ;
+        Object.keys(query_params).forEach( k =>{
+            slack_path += k + "=" + encodeURI(query_params[k]) + "&";
         });
-    }).on('error', (e) => {
-        console.error(`Got error: ${e.message}`);
-    });
-});
 
+        var authReply={};
+        // must check scope against SLACK
+        const slackreq = https.get(slack_path, (slack_reply) => {
+            const { statusCode } = slack_reply;
+            const contentType = slack_reply.headers['content-type'];
+            let error;
+            if (statusCode !== 200) {
+                error = new Error('Request Failed.\n' +
+                                `Status Code: ${statusCode}`);
+            } else if (!/^application\/json/.test(contentType)) {
+                error = new Error('Invalid content-type.\n' +
+                                `Expected application/json but received ${contentType}`);
+            }
+            if (error) {
+                console.error(error.message);
+                // Consume response data to free up memory
+                slack_reply.resume();
+                return;
+            }
+
+            slack_reply.setEncoding('utf8');
+            let rawData = '';
+            slack_reply.on('data', (chunk) => {rawData += chunk;});
+            slack_reply.on('end', () => {
+            authReply = JSON.parse(rawData);
+            console.log(authReply);
+
+            if (authReply.ok == true){
+                if( CONFIG.AUTH.team_check ){
+                    // Check team id of authenticated slack user
+                    if (authReply.team.id != CONFIG.AUTH.team_id) {
+                        console.warn("Team check Failed : " + authReply.team.id);
+                        res.redirect('/#authentication_failed');
+                        return;
+                    }
+                }
+                res.cookie('karch_session', LIBAUTH.getAccessToken(), { maxAge: 60*1000*120, httpOnly: false});
+                res.redirect('/'+req.param("state") || "");
+            } else {
+                // invalid access code
+                res.redirect('/#authentication_failed');
+            }
+            // Added to redirect to right page 
+            //res.redirect('/');
+            });
+        }).on('error', (e) => {
+            console.error(`Got error: ${e.message}`);
+            res.redirect('/#authentication_failed');
+        });
+    }
+    catch (e){
+        console.error(e.message);
+        res.redirect('/#authentication_failed');
+        return;
+    }
+
+});
+/*
 function checkSlackAnswer(reply, res){
     if (reply.ok == true){
         // Forge access_token with limited timespan.
@@ -125,5 +143,5 @@ function checkSlackAnswer(reply, res){
     }
     else res.send("KO");
 }
-
+*/
 module.exports = router;
