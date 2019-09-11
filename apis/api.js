@@ -68,6 +68,10 @@ router.get('/getsvgfromfile',  (req, res, next) => {
             lineReader.eachLine( full_file_path , function(line) {
                 if (startRE.test(line)) {
                     shouldRenameFile = line.match(startRE)[1];
+                    shouldRenameFile = shouldRenameFile.replace(/\"/g, "");
+                    if ( ! (/\.puml$/).test(shouldRefreshPumls) ) {
+                        shouldRenameFile += ".puml"
+                    }
                     return false; // stop reading
                 }
             });
@@ -82,7 +86,13 @@ router.get('/getsvgfromfile',  (req, res, next) => {
                 let imgname =req.param("file").replace(/\.[^/.]+$/, ".svg")
                 if (shouldRenameFile !==false) {
                     console.log("Rename file todo");
-                    fs.renameSync("./svgs/"+shouldRenameFile.replace(/\.[^/.]+$/, ".svg") , "./svgs/"+imgname);
+                    try {
+                        fs.renameSync("./svgs/"+shouldRenameFile.replace(/\.[^/.]+$/, ".svg") , "./svgs/"+imgname);
+                    } catch (e){
+                        res.status(500)
+                        res.json({code:"PUML_ERROR", msg:"@startuml <Filename> issue",detail: "Please add '.puml' at the end of your startuml statement"}); 
+                        return;
+                    }
                 }
                 // Create sym dir in /svgs/folder
                 // move produced file to that folder.

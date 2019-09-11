@@ -21,6 +21,11 @@ app.disable('x-powered-by');
 // serve static content.
 app.use("/",  express.static( "static" ) );
 
+// Enrich res with specific methods
+app.use(function (error, req, res, next) {
+    res.status(500)
+    res.json( { code : "SERVER_ERROR", msg: "    " } ); 
+});
 
 // serve APIs
 app.use( "/auth", require("./apis/auth"));    
@@ -48,12 +53,6 @@ app.use( "/api",
 );
 
 
-// Enrich res with specific methods
-app.use(function (error, req, res, next) {
-    res.status(500)
-    res.json( { code : "SERVER_ERROR", msg: "    " } ); 
-
-});
 
 // Start server
 app.listen(C_SERVER_PORT, function () {
