@@ -193,8 +193,12 @@ manageLoactionChange = async function(){
 window.onhashchange = manageLoactionChange;
 
 /********************* */
-// handle URL change, and trigger XHR
+// handle URL change in location hash, and trigger XHR
 function processhref(in_href){
+    if (/^#authentication_failed/.test(in_href)){
+        kAlert("Authentication Failed","");
+        return;
+    }
     // Interpret path :
     var matchs= in_href.match(/#(.*)\?(.*)/);
     var action, tmp_params, params={}
