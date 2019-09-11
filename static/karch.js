@@ -5,8 +5,8 @@ document.addEventListener('keydown', (event) => {
 document.addEventListener('keydown', (event) => {
     if (event.key == "r") {G_CURRENT_TAB.refresh();cleanHash()}
 });
+window.onscroll = function() {if (G_CURRENT_TAB) {G_CURRENT_TAB.scroll = document.body.scrollTop; }};
 
-var AUTH_BEARER;
   
 function toggleBrowser(){
     (document.getElementById('browser_active').style.display=='none') ? showBrowser(): hideBrowser();
@@ -29,8 +29,17 @@ function logout(){
     document.cookie = 'karch_session=; Max-Age=-99999999;';
     window.location = window.location.origin;
 }
-function signInWithSlack(){
-    window.location = "https://a-cms.slack.com/oauth/authorize?scope=identity.basic&client_id=54930473732.703276485158&state="+encodeURIComponent(location.hash);
+async function signInWithSlack(){
+    // retrieve slack auth path 
+    try {
+        var reply = await AUTHCall("slackauthparams");
+        if (reply.auth_url) {
+            window.location = reply.auth_url + encodeURIComponent(location.hash);
+        }
+    } catch (e){
+        console.error("Failed to forge SLACK signin URL")
+        kAlert("Sthg went wrong","...")
+    }
 }
 
 /********************* */
@@ -51,48 +60,7 @@ async function askForAuthentication( ) {
     document.getElementById("browser").style.display="none";
     return;
 }
-// To be deleted
-async function handleAuthentold( ) {
-    // Get bearer from Cookie and check if valid.
-    // Otherwise, prompt social login.
-    var session_bearer = false;
 
-    // Search within existing Cookies.
-    var cookies = document.cookie.split(";");
-    cookies.forEach(cookie => {
-        let cook = cookie.trim().split("=")
-        if (cook[0] == "karch_session"){
-            session_bearer = cook[1];
-        }
-    });
-    if ( session_bearer) {
-        console.log("Using karch_session from cookies");
-        try {
-            // check it
-            var reply = await AUTHCall("checksession", {karch_session : session_bearer})
-            if ( ! reply.ok ){
-                console.log("Invalid session_token");
-                throw new Error("Invalid session_token")
-            } else {
-                AUTH_BEARER = session_bearer;
-            }
-        } catch (e) {
-            console.log("session token from cookie" +e.message);
-            session_bearer = false;
-            document.cookie = 'karch_session=; Max-Age=-99999999;';
-        }
-    }
-
-    if (session_bearer){
-        document.getElementById("browser").style.display="block";
-        document.getElementById("signin").style.display="none";
-        renderDirContent(document.getElementById("root_dir"), ".");
-    } else {
-        document.getElementById("signin").style.display="block";
-        document.getElementById("browser").style.display="none";
-    }
-    return;
-}
 function AUTHCall( in_api, in_params, in_notjson) {return  XXXCall("auth",in_api, in_params, in_notjson )}
 function APICall( in_api, in_params, in_notjson) { return XXXCall("api",in_api, in_params, in_notjson )}
 function XXXCall(in_type, in_api, in_params, in_notjson) {
@@ -101,7 +69,7 @@ function XXXCall(in_type, in_api, in_params, in_notjson) {
             in_params = {}
         };
         var uri_params = formatParams(in_params);
-
+        console.log("Starting XHR call");
         var req = new XMLHttpRequest();
         req.open('GET',ROOT_URI + in_type +"/" + in_api + uri_params, true);
         req.setRequestHeader('X-Requested-With', 'XHR');
@@ -110,13 +78,13 @@ function XXXCall(in_type, in_api, in_params, in_notjson) {
         req.setRequestHeader('Authorization', 'Bearer ' + bearer?bearer:"");
         
         req.onreadystatechange = function () {
+            console.log("req.readyState"+req.readyState);
             if (req.readyState == 4) {
                 if (req.status == 200) {
                     resolve( in_notjson ?  req.responseText : JSON.parse(req.responseText));
                 } 
                 else if (req.status == 401) {
                     // need to reauthentify, cause token is invalid.
-                    AUTH_BEARER =null;
                     document.cookie = 'karch_session=; Max-Age=-99999999;';
                     askForAuthentication();
                 }
@@ -137,9 +105,7 @@ function XXXCall(in_type, in_api, in_params, in_notjson) {
     })
 }
 
-
-
-cleanHash = function (){
+function cleanHash  (){
     // Hint to clean location.hash. Drawback : navigates on top...
     // Call only if current hash has something
     if (location.hash.length >2)
@@ -147,10 +113,11 @@ cleanHash = function (){
 }
 /********************* */
 // handle URL change, and trigger XHR
-manageLoactionChange = async function(){
+async function manageLoactionChange (){
     if (!location.hash) {return;}
     console.log("Switching to " + location.hash)
     var opt = processhref(location.hash);
+    // Saving current tab scroll
     hideBrowser();
     var res
     try{
@@ -190,7 +157,7 @@ manageLoactionChange = async function(){
         return;
     }
 };
-window.onhashchange = manageLoactionChange;
+window.addEventListener("hashchange",function(event){manageLoactionChange()},false);
 
 /********************* */
 // handle URL change in location hash, and trigger XHR
@@ -305,42 +272,35 @@ async function renderDirContent( in_el, in_dir_path){
 
 /********************* */
 async function renderPuml (in_file){
-    TAB_ID++;
-    var target_el = createTab(in_file, "tabid_"+TAB_ID).svg;
-    refreshPuml(in_file, target_el);
+    getTab(in_file).setContentEl( getLoadingImg() );
+    getTab(in_file).setContentHtml( await refreshPuml(in_file, true) );
     cleanHash();
 }
 /********************* */
-async function refreshPuml (in_file, target_el){
+async function refreshPuml (in_file, no_refresh ){
     try {
-
-        target_el.innerHTML="";
-        target_el.appendChild(getLoadingImg());
-        var svgdata = await APICall("getsvgfromfile",{file : in_file.filename, dir : in_file.path, force :true }, true);
-        target_el.innerHTML = svgdata;
+        let should_refresh = no_refresh ? false : true;
+        let request = { file : in_file.filename, dir : in_file.path };
+        if (should_refresh) {request.force = true;}
+        return  await APICall( "getsvgfromfile", request, true);
         }
     catch (e) {
         console.error("Failed to retrieve svg for " + in_file.filename);
-        //content_el.innerHTML = "/!\\ Failed to load /!\\";
-        target_el.innerHTML = "/!\\ Failed to load /!\\<br>" + e.detail;
+        return "/!\\ Failed to load /!\\<br>" + e.detail;
     }
 }
 /********************* */
 async function renderMd (in_file){
-    TAB_ID++;
-    var target_el = createTab(in_file, "tabid_"+TAB_ID).svg;
+    var tab = getTab(in_file);
     try {
         var md_data = await APICall("getmdfile",{file : in_file.filename, dir : in_file.path}, true);
-        //var content_el = document.getElementById("content_el");
-        var converter = new showdown.Converter(),
-        html = converter.makeHtml(md_data);
-        target_el.innerHTML = html;
-
-        }
+        var converter = new showdown.Converter();
+        var md_html = converter.makeHtml(md_data);
+        tab.setContentHtml( md_html );
+    }
     catch (e) {
         console.error("Failed to retrieve MD");
-        //content_el.innerHTML = "/!\\ Failed to load /!\\";
-        target_el.innerHTML = "/!\\ Failed to load /!\\";
+        tab.setContentHtml( "/!\\ Failed to load /!\\" );
     }
 }
 /********************* */
@@ -351,43 +311,70 @@ function getLoadingImg(in_size){
     return i;
 }
 
-
 /********************* */
-function createTab(in_file, in_tab_id){
-    var tab_name = in_file.filename;
+function getTabByRef(in_tref){
+    var tab_found=false;
+    Object.keys(LOADED_TABS).forEach(id => {if (LOADED_TABS[id].tab_ref == in_tref) {tab_found = LOADED_TABS[id];}});
+    return tab_found;
+}
+/********************* */
+// create new or activate existing tab
+function getTab(in_file){
     var tab_ref = in_file.path +"/"+ in_file.filename;
+    var cur_tab = getTabByRef(tab_ref);
     // Check if tab already exists.
-    let idx = Object.keys(LOADED_TABS).indexOf(tab_ref);
-    if ( idx >= 0 ){
-        // Already loaded
-        selectTab(LOADED_TABS[tab_ref].tab_id, {currentTarget : LOADED_TABS[tab_ref].tab_but_el});
-        return LOADED_TABS[tab_ref].tab_content_el;
+    if (cur_tab){
+        cur_tab.activate();
+        return cur_tab;
     }
-    // Create new Tab.
-    var but_el = document.createElement("button");
-    but_el.classList.add("tablinks");
-    but_el.classList.add("active");
-    but_el.innerText = tab_name;
-    but_el.ref = tab_ref;
+    // otherwise create new one
+    var NEW_TAB = {
+        id : TAB_ID++,
+        file : in_file,
+        tab_ref : tab_ref,
+        tab_but_el : document.createElement("button"),
+        tab_content_el : document.createElement("div"),
+        tab_svg_el : document.createElement("div"),
+        scroll : 0,
+        async refresh () {
+            this.setContentEl( getLoadingImg() );
+            this.setContentHtml( await refreshPuml(this.file, false));
+            this.scroll = 0;
+        },
+        deactivate () { 
+            this.tab_but_el.classList.remove("active");
+            this.tab_content_el.style.display = "none";
+        },
+        activate() {
+            Object.keys(LOADED_TABS).forEach((id) => {LOADED_TABS[id].deactivate();});
+            this.tab_content_el.style.display = "block";
+            this.tab_but_el.classList.add("active");
+            G_CURRENT_TAB = this;
+        },
+        delete () {
+            this.tab_but_el.remove();
+            this.tab_content_el.remove();
+            delete LOADED_TABS[this.id];    
+        },
+        setContentHtml (new_content)  {
+            console.log("Start rendering SVG");
+            this.tab_svg_el.innerHTML=new_content; // clean
+        },
+        setContentEl (new_content_el)  {
+            this.tab_svg_el.innerHTML=""; // clean
+            this.tab_svg_el.appendChild(new_content_el);
+        }
+    };
+    NEW_TAB.tab_but_el.classList.add("tablinks");
+    NEW_TAB.tab_but_el.classList.add("active"); // active by default
+    NEW_TAB.tab_but_el.innerText = in_file.filename;
+    NEW_TAB.tab_but_el.ref = tab_ref;
+    NEW_TAB.tab_but_el.title = in_file.path;
+    document.getElementById("tab_root_el").appendChild(NEW_TAB.tab_but_el);
 
-    document.getElementById("tab_root_el").appendChild(but_el);
-    but_el.addEventListener("click", function(e){ 
-        selectTab(in_tab_id, e);
-    });
-    but_el.addEventListener("dblclick", function(e){ 
-        document.getElementById(in_tab_id).remove();
-        delete LOADED_TABS[tab_ref];
-        e.currentTarget.remove();
-    });
     // Create tab Content
-    var content_el = document.createElement("div");
-    content_el.classList.add("tabcontent");
-    content_el.id = in_tab_id;
-    document.getElementById("content_el").appendChild(content_el);
-    // Will hold svg image
-    var content_svg_el = document.createElement("div");
-    content_svg_el.style.textAlign="center";
-    content_svg_el.appendChild(getLoadingImg());
+    NEW_TAB.tab_content_el.classList.add("tabcontent");
+    document.getElementById("content_root_el").appendChild(NEW_TAB.tab_content_el);
 
     // Header to force reload
     var content_refresh_el = document.createElement("div");
@@ -396,44 +383,26 @@ function createTab(in_file, in_tab_id){
     content_refresh_el.addEventListener('click', e => {
         refreshPuml(in_file, content_svg_el);
     })
+    NEW_TAB.tab_content_el.appendChild(content_refresh_el);
 
-    content_el.appendChild(content_refresh_el);
-    content_el.appendChild(content_svg_el);
+    // Will hold svg image
+    NEW_TAB.tab_svg_el.style.textAlign="center";
+    NEW_TAB.setContentEl( getLoadingImg() );
+    NEW_TAB.tab_content_el.appendChild(NEW_TAB.tab_svg_el);
 
-    content_el.svg = content_svg_el;
-
-    LOADED_TABS[tab_ref] = {
-        tab_id : in_tab_id,
-        tab_ref : tab_ref,
-        tab_but_el : but_el,
-        tab_content_el : content_el,
-        refresh : () => {refreshPuml(in_file, content_svg_el);}
-    };
-    selectTab(in_tab_id, {currentTarget : but_el});
-    return content_el;
+    // when click on the tab button
+    NEW_TAB.tab_but_el.addEventListener("click", function(e){ 
+        NEW_TAB.activate();
+    });
+    // when Dblclick on the tab button --> Remove it
+    NEW_TAB.tab_but_el.addEventListener("dblclick", function(e){ 
+        NEW_TAB.delete();
+    });
+    LOADED_TABS[NEW_TAB.id] = NEW_TAB;
+    NEW_TAB.activate();
+    return NEW_TAB;
 }
 
-/********************* */
-function selectTab(in_tab_id, evt){
-    var i, tabcontent, tablinks;
-    tabcontent = document.getElementsByClassName("tabcontent");
-    for (i = 0; i < tabcontent.length; i++) {
-      tabcontent[i].style.display = "none";
-    }
-    tablinks = document.getElementsByClassName("tablinks");
-    for (i = 0; i < tablinks.length; i++) {
-      tablinks[i].className = tablinks[i].className.replace(" active", "");
-    }
-    document.getElementById(in_tab_id).style.display = "block";
-    if (evt) {
-        evt.currentTarget.className += " active";
-        Object.keys(LOADED_TABS).forEach ( tref => {
-            if (LOADED_TABS[tref].tab_id == in_tab_id) {
-                G_CURRENT_TAB = LOADED_TABS[tref];
-            }
-        });        
-    }
-}
 
 
 /********************* */
@@ -450,4 +419,10 @@ window.onload = async function(){
     renderDirContent(document.getElementById("root_dir"), ".");
     manageLoactionChange();
     console.log(root_dir);
+    // handle search.
+    document.getElementById("b_search").addEventListener("click", async function()  {
+        var search_str = document.getElementById("i_search").value;
+        res = await APICall("searchfile", {filename : search_str});
+        choseAmongProposition(res.results);
+    })
 }

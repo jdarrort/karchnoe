@@ -60,7 +60,7 @@ router.get('/getsvgfromfile',  (req, res, next) => {
         // continue
         console.log("no existing file, generate it");
     }
-    if ( should_generate || req.param("force")) {
+    if ( should_generate || req.query["force"]) {
         try {
             // We have an issue when puml explicit a filename : @startuml myOwnFile.puml
             let startRE=/^\s*@startuml\s+(\S+)/
@@ -75,8 +75,10 @@ router.get('/getsvgfromfile',  (req, res, next) => {
                     return false; // stop reading
                 }
             });
+            res.type("image/svg+xml");
 
             // FYI, context of execution is root path of script.
+            
             exec(' java -jar plant/plantuml.jar -tsvg -o '+path.join(global.appRoot, "svgs")+' "' + full_file_path+'"', (err, stdout, stderr) => {
                 if (err) {
                     res.status(500)
@@ -127,6 +129,7 @@ router.get('/getmdfile',  (req, res, next) => {
         res.json({code:"NOT_FOUND", msg:"file not found"}); 
         return;
     } 
+    res.type("text/plain");
     res.sendFile(full_file_path);
 });
 
@@ -239,13 +242,29 @@ router.get('/searchmq',  (req, res, next) => {
 /** ******************************************** */
 function searchFilePattern(in_pattern){
     var matches = [];
-    // Browse through PUML_FILES
-    PUML_FILES.forEach( file => {
-        if (file.filename.toLowerCase().indexOf(in_pattern) >= 0 ) {
-            matches.push(file);
-        }
-    });
-    return matches
+    var use_regex = false;
+    // Check for wildcard "*", and use regex is found.
+    if (in_pattern.indexOf("*") >= 0 ) {
+        console.log("Wildcarded search");
+        use_regex = new RegExp(in_pattern.replace(/\*/g,".*"),"ig");
+    }
+
+    if (use_regex) {
+        // Browse through PUML_FILES
+        PUML_FILES.forEach( file => {
+            if (use_regex.test(file.filename)) {
+                matches.push(file);
+            }
+        });
+    } else {
+        // Browse through PUML_FILES
+        PUML_FILES.forEach( file => {
+            if (file.filename.toLowerCase().indexOf(in_pattern) >= 0 ) {
+                matches.push(file);
+            }
+        });
+    }
+    return matches;
 }
 /*
 function buildAdaptorList(){

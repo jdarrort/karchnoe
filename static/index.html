@@ -19,14 +19,11 @@
             <b>BROWSER</b> <i>(hit ESC to show /hide)</i>
             <span class="closebtn" style="background-color:black" onclick="hideBrowser()">X</span> 
             <hr>
+            Search : <input type="text" size="25" id="i_search"> <button id="b_search">Search</button>
+            <hr>
             <ul id="root_dir"></ul>
             <ul><li onclick="logout()" style="cursor:pointer"><b>Logout</b></li></ul>
         </div>
-        <!--<div id=browser_inactive style="display:none"  onclick="showBrowser()">
-            <span class="closebtn" style="background-color:black">&gt;</span> 
-            B<br>R<br>O<br>W<br>S<br>E<br>R<br>
-          </div>
-          -->
     </div>
 
     <div id="infobox">
@@ -41,9 +38,13 @@
        <!-- <span class="closebtn">&times;</span> -->
       </div>        
     </div>
+
+
     <div id="menu" style="display:none"> 
-      <b>Matching files :</b>
-      <span class="closebtn" onclick="this.parentElement.style.display='none';">&times;</span> 
+      <div style="text-align:center;margin-right:30px;">
+        <b>Matching files :</b>
+        <span class="closebtn" onclick="document.getElementById('menu').style.display='none';">&times;</span> 
+      </div>
       <hr>
       <div><ul id="menu_content"></ul></div>
     </div>
@@ -56,7 +57,7 @@
   </div>  
   <div id="root_body">
     <div id="tab_root_el" class="tab"></div>
-    <div id="content_el"></div>
+    <div id="content_root_el"></div>
   </div>
   </body>
 </html>
