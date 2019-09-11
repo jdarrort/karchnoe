@@ -9,7 +9,7 @@ const https = require('https');
 
 /********************* */
 router.get('/checksession',  (req, res, next) => {
-    if (LIBAUTH.checkAccessToken(req.param("karch_session")) ) {
+    if (LIBAUTH.checkAccessToken(req.query["karch_session"]) ) {
         res.send({ok : true});
     } else {
         res.send({ok : false});
@@ -69,7 +69,8 @@ router.get('/fromslack',  (req, res, next) => {
 router.get('/fromslack2',  (req, res, next) => {
     try {
         var query_params ={};
-        query_params.code= req.params["code"];
+        query_params.code= req.query["code"];
+        //console.log("Code : " + query_params.code);
         query_params.client_id      = CONFIG.AUTH.SLACK.client_id;
         query_params.client_secret  = CONFIG.AUTH.SLACK.client_secret;
         query_params.redirect_uri   = CONFIG.AUTH.SLACK.redirect_uri;
@@ -106,12 +107,14 @@ router.get('/fromslack2',  (req, res, next) => {
             console.log(authReply);
 
             if (authReply.ok == true){
-                if( CONFIG.AUTH.team_check ){
+                if( CONFIG.AUTH.SLACK.team_check ){
                     // Check team id of authenticated slack user
-                    if (authReply.team.id != CONFIG.AUTH.team_id) {
+                    if (authReply.team.id != CONFIG.AUTH.SLACK.team_id) {
                         console.warn("Team check Failed : " + authReply.team.id);
-                        res.redirect('/#authentication_failed');
+                        res.redirect('/#authentication_failed_invalid_team');
                         return;
+                    } else {
+                        console.log("TeamId check OK");
                     }
                 }
                 res.cookie('karch_session', LIBAUTH.getAccessToken(), { maxAge: 60*1000*120, httpOnly: false});
