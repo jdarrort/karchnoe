@@ -69,9 +69,11 @@ router.get('/getsvgfromfile',  (req, res, next) => {
                 if (startRE.test(line)) {
                     shouldRenameFile = line.match(startRE)[1];
                     shouldRenameFile = shouldRenameFile.replace(/\"/g, "");
-                    if ( ! (/\.puml$/).test(shouldRefreshPumls) ) {
+                    if ( ! /\.puml$/.test(shouldRenameFile) ) {
                         shouldRenameFile += ".puml"
                     }
+                    shouldRenameFile = shouldRenameFile.replace("\"","")
+                    shouldRenameFile = shouldRenameFile.replace("\'","")
                     return false; // stop reading
                 }
             });
@@ -297,7 +299,6 @@ function shouldRefreshPumls(){
         refreshPumlFiles();
     }
 }
-
 
 
 /* Browse a DIRECTORY , non recursively, splitting dirs and files*/
