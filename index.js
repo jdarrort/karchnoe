@@ -29,28 +29,7 @@ app.use(function (error, req, res, next) {
 
 // serve APIs
 app.use( "/auth", require("./apis/auth"));    
-app.use( "/api", 
-    // Security controller
-    function(req,res,next){
-        // If NO AUTH
-        if (CONFIG.AUTH.DISABLE == true) {next(); return;}
-
-
-        // Check Authorization Bearer
-        var bearer ;
-        if (req.headers["authorization"] ) {
-            bearer = req.headers["authorization"].replace(/^Bearer /,"");
-        }
-        if (LIBAUTH.checkAccessToken(bearer)){
-            next();
-        }
-        else {
-            res.status(401).send("Not authorized");
-        }
-    },
-    // If security OK, process.
-    require("./apis/api")
-);
+app.use( "/api", LIBAUTH.authorize, require("./apis/api") );
 
 
 

@@ -9,8 +9,16 @@ const https = require('https');
 
 
 router.get('/slackauthparams',  (req, res, next) => {
+    // query params
+    var query_params = {
+        scope : "identity.basic",
+        client_id : CONFIG.AUTH.SLACK.client_id,
+        team : CONFIG.AUTH.SLACK.team_id,
+        redirect_uri : CONFIG.AUTH.SLACK.redirect_uri
+
+    };
     res.send({
-        auth_url : "https://a-cms.slack.com/oauth/authorize?scope=identity.basic&client_id="+ CONFIG.AUTH.SLACK.client_id + "&team=" + CONFIG.AUTH.SLACK.team_id+"&state"
+        auth_url : "https://a-cms.slack.com/oauth/authorize?scope=identity.basic&client_id="+ Object.keys(query_params).map(p => {return p + "=" + encodeURIComponent(query_params[p]);}).join("&")
     });
 })
 
@@ -26,16 +34,15 @@ router.get('/checksession',  (req, res, next) => {
 /********************* */
 router.get('/fromslack2',  (req, res, next) => {
     try {
-        var query_params ={};
-        query_params.code= req.query["code"];
-        //console.log("Code : " + query_params.code);
-        query_params.client_id      = CONFIG.AUTH.SLACK.client_id;
-        query_params.client_secret  = CONFIG.AUTH.SLACK.client_secret;
-        query_params.redirect_uri   = CONFIG.AUTH.SLACK.redirect_uri;
-        var slack_path              = CONFIG.AUTH.SLACK.path ;
-        Object.keys(query_params).forEach( k =>{
-            slack_path += k + "=" + encodeURI(query_params[k]) + "&";
-        });
+        var query_params_obj = {
+            code : req.query["code"],
+            client_id : CONFIG.AUTH.SLACK.client_id,
+            client_secret : CONFIG.AUTH.SLACK.client_secret,
+            redirect_uri : CONFIG.AUTH.SLACK.redirect_uri
+        };        
+        var slack_path = CONFIG.AUTH.SLACK.path  + Object.keys(query_params_obj).map(p => {
+            return p + "=" + encodeURIComponent(query_params_obj[p]);
+        }).join("&");
 
         var authReply={};
         // must check scope against SLACK
@@ -86,7 +93,7 @@ router.get('/fromslack2',  (req, res, next) => {
             });
         }).on('error', (e) => {
             console.error(`Got error: ${e.message}`);
-            res.redirect('/#authentication_failed');
+            // don't do anything here... would cause ECONNRESET and crash
         });
     }
     catch (e){

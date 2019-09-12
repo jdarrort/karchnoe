@@ -30,11 +30,11 @@ function logout(){
     window.location = window.location.origin;
 }
 async function signInWithSlack(){
-    // retrieve slack auth path 
+    // retrieve slack auth path  and redirect to Slack sign in page.
     try {
         var reply = await AUTHCall("slackauthparams");
         if (reply.auth_url) {
-            window.location = reply.auth_url + encodeURIComponent(location.hash);
+            window.location = reply.auth_url + "&state="+ encodeURIComponent(location.hash);
         }
     } catch (e){
         console.error("Failed to forge SLACK signin URL")
@@ -69,7 +69,6 @@ function XXXCall(in_type, in_api, in_params, in_notjson) {
             in_params = {}
         };
         var uri_params = formatParams(in_params);
-        console.log("Starting XHR call");
         var req = new XMLHttpRequest();
         req.open('GET',ROOT_URI + in_type +"/" + in_api + uri_params, true);
         req.setRequestHeader('X-Requested-With', 'XHR');
@@ -78,7 +77,6 @@ function XXXCall(in_type, in_api, in_params, in_notjson) {
         req.setRequestHeader('Authorization', 'Bearer ' + bearer?bearer:"");
         
         req.onreadystatechange = function () {
-            console.log("req.readyState"+req.readyState);
             if (req.readyState == 4) {
                 if (req.status == 200) {
                     resolve( in_notjson ?  req.responseText : JSON.parse(req.responseText));
@@ -181,12 +179,9 @@ function processhref(in_href){
 };
 /********************* */
 function formatParams( params ){
-    return "?" + Object
-          .keys(params)
-          .map(function(key){
+    return "?" + Object.keys(params).map(function(key){
             return key+"="+encodeURIComponent(params[key])
-          })
-          .join("&")
+          }).join("&");
 }
 
 /********************* */
