@@ -16,6 +16,7 @@ const C_KARCH_REPO = "karch_repo" ;
 
 global.appRoot = path.resolve(__dirname);
 global.repoRoot = path.join(path.resolve(__dirname), C_KARCH_REPO);
+global.svgRoot = path.join(path.resolve(__dirname), "svgs");
 
 app.disable('x-powered-by');
 // serve static content.

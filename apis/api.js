@@ -13,107 +13,88 @@ var PUML_FILES = [];
 var LAST_REFRESH_TIMESTAMP
 
 /********************* */
-router.get('/loadPUMLs',  (req, res, next) => {
-    loadPlatformPumls();
-    res.json(PUML_FILES);
-    
-});
+
 
 /********************* */
 router.get('/browsedir',  (req, res, next) => {
-    shouldRefreshPumls();
-    var listfiles  = readdir(req.param("dir"));
-    res.json(listfiles);
+    try {
+        shouldRefreshPumls();
+        var listfiles  = readdir(req.query.dir);
+        res.json(listfiles);
+    
+    } catch (e) {
+        res.status(500)
+        res.json({code:"SERVER_ERROR", msg: e.msg }); 
+    }
 });
 
 /********************* */
 /*
 - file : filename 
 - dir : path from karch_root
-- force (o) : force  regeneration of SVG
+- force (o) : if present, force  regeneration of SVG
  */
 router.get('/getsvgfromfile',  (req, res, next) => {
-    // check if previously generated image exists.
-    // if yes, check timestamp vs plantuml source, to see if update required.
-    shouldRefreshPumls();
-    let imgname =req.param("file").replace(/\.[^/.]+$/, ".svg");
+    try {
+        // check if previously generated image exists.
+        // if yes, check timestamp vs plantuml source, to see if update required.
+        shouldRefreshPumls();
+        var img_basename = req.query.file.replace(/\.\w+$/,""); // remove extension
+        var img_final_name = getHashForDir(req.query.dir) + "_" + img_basename + ".svg";
 
-    var full_file_path = path.join(global.repoRoot,  req.query.dir,  req.query.file);
-    // get puml file if exists
-    try {
-        var puml_file_stats = fs.statSync(full_file_path );
-    } catch (e) {
-        res.status(404)
-        res.json({code:"NOT_FOUND", msg:"file not found"}); 
-        return;
-    } 
-    // only launch puml-> svg generation if file is old.
-    var should_generate = true;
-    try {
-        var svg_target_path = path.join(global.appRoot, "svgs", imgname );
-        var svg_file_stats = fs.statSync( svg_target_path );
-        if (svg_file_stats.mtime > puml_file_stats.mtime) {
-            console.log("already exists and uptodate");
-            should_generate = false;
-        }
-    } catch (e) {
-        // continue
-        console.log("no existing file, generate it");
-    }
-    if ( should_generate || req.query["force"]) {
+        var full_file_path = path.join(global.repoRoot,  req.query.dir,  req.query.file);
+        // get puml file if exists
         try {
-            // We have an issue when puml explicit a filename : @startuml myOwnFile.puml
-            let startRE=/^\s*@startuml\s+(\S+)/
-            var shouldRenameFile=false;
-            lineReader.eachLine( full_file_path , function(line) {
-                if (startRE.test(line)) {
-                    shouldRenameFile = line.match(startRE)[1];
-                    shouldRenameFile = shouldRenameFile.replace(/\"/g, "");
-                    if ( ! /\.puml$/.test(shouldRenameFile) ) {
-                        shouldRenameFile += ".puml"
-                    }
-                    shouldRenameFile = shouldRenameFile.replace("\"","")
-                    shouldRenameFile = shouldRenameFile.replace("\'","")
-                    return false; // stop reading
+            var puml_file_stats = fs.statSync(full_file_path );
+        } catch (e) {
+            res.status(404)
+            res.json({code:"NOT_FOUND", msg:"file not found"}); 
+            return;
+        } 
+        // only launch puml-> svg generation if file is old.
+        var should_generate = true;
+        if (!req.query.force ){
+            try {
+                var svg_file_stats = fs.statSync(  path.join( global.svgRoot, img_final_name ) );
+                if (svg_file_stats.mtime > puml_file_stats.mtime) {
+                    console.log("already exists and uptodate");
+                    should_generate = false;
                 }
-            });
+            } catch (e) {
+                // continue
+                console.log("no existing file, generate it");
+            }
+        } else {
+            console.log("Forced refresh");
+        }
+        if ( !should_generate ) {
             res.type("image/svg+xml");
+            res.sendFile( img_final_name, { root:  global.svgRoot } );
+            return;
+        } else {
+            try {
+                res.type("image/svg+xml");
 
-            // FYI, context of execution is root path of script.
-            
-            exec(' java -jar plant/plantuml.jar -tsvg -o '+path.join(global.appRoot, "svgs")+' "' + full_file_path+'"', (err, stdout, stderr) => {
-                if (err) {
-                    res.status(500)
-                    res.json({code:"PUML_ERROR", msg:"Generation failed",detail: err.message}); 
-                    return;
-                }
-                let imgname =req.param("file").replace(/\.[^/.]+$/, ".svg")
-                if (shouldRenameFile !==false) {
-                    console.log("Rename file todo");
-                    try {
-                        fs.renameSync("./svgs/"+shouldRenameFile.replace(/\.[^/.]+$/, ".svg") , "./svgs/"+imgname);
-                    } catch (e){
+                // FYI, context of execution is root path of script.
+                // jar library is weird... it removes -ofile  extension with svg ==> adding ".bla" to keep intact target filename
+                exec(' java -jar plant/plantuml.jar -tsvg  -ofile "' + path.join(global.svgRoot, img_final_name.replace(/\.svg$/,".bla")) + '"  "' + full_file_path+'"', (err, stdout, stderr) => {
+                    if (err) {
                         res.status(500)
-                        res.json({code:"PUML_ERROR", msg:"@startuml <Filename> issue",detail: "Please add '.puml' at the end of your startuml statement"}); 
+                        res.json({code:"PUML_ERROR", msg:"Generation failed",detail: err.message}); 
                         return;
                     }
-                }
-                // Create sym dir in /svgs/folder
-                // move produced file to that folder.
-                // fs.mkdirSync(  , {recursive:true}, 0o666)
-                // fs.rename( , )
-
-                res.sendFile(imgname, { root: "./svgs" });
-            }); 
-        } catch (e) {
-            res.status(500)
-            res.json({code:"PUML_ERROR", msg:"Generation failed"}); 
-            return;
+                    res.sendFile(img_final_name, { root:  global.svgRoot});
+                }); 
+            } catch (e) {
+                res.status(500)
+                res.json({code:"PUML_ERROR", msg:"Generation failed"}); 
+                return;
+            }
         }
-
-    } else {
-        res.sendFile(imgname, { root: "./svgs" });
-    }
+    } catch (e) {
+        res.status(500)
+        res.json({code:"SERVER_ERROR", msg: e.msg }); 
+    }        
 });
 
 /********************* */
@@ -125,7 +106,7 @@ router.get('/getmdfile',  (req, res, next) => {
     var full_file_path = path.join(global.repoRoot,  req.query.dir,  req.query.file);
     // get puml file if exists
     try {
-        var puml_file_stats = fs.statSync(full_file_path );
+       fs.statSync(full_file_path );
     } catch (e) {
         res.status(404)
         res.json({code:"NOT_FOUND", msg:"file not found"}); 
@@ -142,67 +123,20 @@ router.get('/getmdfile',  (req, res, next) => {
 - verb  :  get/post/delete/... 
 - ref : apiCode / eventCode
  */
-router.get('/searchapiold',  (req, res, next) => {
-
-    // Get Target Adapter
-    var target_adapter = KMR_ADAPTORS[req.query.adapter.toLowerCase()];
-    if ( ! target_adapter ){
-        res.status(404)
-        res.json( {code:"NOT_FOUND", msg:"Adaptor not found " + req.query.adapter } ); 
-        return;
-    }
-    var search_path, dir_content, filepattern,file_pattern_re;
-    var matchs = [];
-    search_path = path.join(target_adapter.path, target_adapter.name + "_APIs");
-    if (! fs.existsSync( path.join(global.repoRoot,search_path) ) ) {
-        search_path = path.join(target_adapter.path, target_adapter.name + "_apis");
-        if (! fs.existsSync( path.join(global.repoRoot,search_path) ) ) {
-            res.status(404)
-            res.json({code:"NOT_FOUND", msg:"Adaptor API path not found (" + search_path +")"}); 
-            return;
-        }
-    }
-    try {
-        fs.statSync( path.join(global.repoRoot,search_path) );
-    } catch (e){
-        res.status(404)
-        res.json({code:"NOT_FOUND", msg:"Adaptor API path not found (" + search_path +")"}); 
-        return;
-    }
-    //  ==> "kxx_API_GET_myApiRe_"
-    filepattern = [ target_adapter.name, "API", req.query.verb, req.query.ref ].join("_") + "_";
-
-    file_pattern_re = new RegExp("^" + filepattern, "i" ); // case insensitive
-    dir_content = readdir(search_path);
-    dir_content.files.forEach ( f => {
-        if (f.filename.match(file_pattern_re)){
-            // Found a matching file !
-            matchs.push(f);
-        }
-    });
-    res.json({
-        count : matchs.length,
-        results : matchs
-    });
-});
-
-
-
-/********************* */
-/*  Search a PUML file from API reference
-- adapter : adapter 
-- verb  :  get/post/delete/... 
-- ref : apiCode / eventCode
- */
 router.get('/searchapi',  (req, res, next) => {
-    shouldRefreshPumls();
-    var filepattern = [ req.query.adapter.toLowerCase(), "api", req.query.verb.toLowerCase(), req.query.ref.toLowerCase() ].join("_");
-    var matches = searchFilePattern(filepattern)  // Browse through PUML_FILES
-    // Group results by Folder ? 
-    res.json({
-        count : matches.length,
-        results : matches
-    });
+    try {
+        shouldRefreshPumls();
+        var filepattern = [ req.query.adapter.toLowerCase(), "api", req.query.verb.toLowerCase(), req.query.ref.toLowerCase() ].join("_");
+        var matches = searchFilePattern(filepattern)  // Browse through PUML_FILES
+        // Group results by Folder ? 
+        res.json({
+            count : matches.length,
+            results : matches
+        });
+    } catch (e) {
+        res.status(500)
+        res.json({code:"SERVER_ERROR", msg: e.msg }); 
+    }
 });
 
 
@@ -211,14 +145,19 @@ router.get('/searchapi',  (req, res, next) => {
 - filename : xxx     
  */
 router.get('/searchfile',  (req, res, next) => {
-    shouldRefreshPumls();
-    var filepattern = req.query.filename.toLowerCase();
-    var matches = searchFilePattern(filepattern)  // Browse through PUML_FILES
-    // Group results by Folder ? 
-    res.json({
-        count : matches.length,
-        results : matches
-    });
+    try{
+        shouldRefreshPumls();
+        var filepattern = req.query.filename.toLowerCase();
+        var matches = searchFilePattern(filepattern)  // Browse through PUML_FILES
+        // Group results by Folder ? 
+        res.json({
+            count : matches.length,
+            results : matches
+        });
+    } catch (e) {
+        res.status(500)
+        res.json({code:"SERVER_ERROR", msg: e.msg }); 
+    }
 });
 
 /********************* */
@@ -227,13 +166,18 @@ router.get('/searchfile',  (req, res, next) => {
 - ref : eventCode
  */
 router.get('/searchmq',  (req, res, next) => {
-    var filepattern = [ req.query.adapter.toLowerCase(), "mq", req.query.ref.toLowerCase() ].join("_");
-    var matches = searchFilePattern(filepattern)  // Browse through PUML_FILES
-    // Group results by Folder ? 
-    res.json({
-        count : matches.length,
-        results : matches
-    });
+    try{
+        var filepattern = [ req.query.adapter.toLowerCase(), "mq", req.query.ref.toLowerCase() ].join("_");
+        var matches = searchFilePattern(filepattern)  // Browse through PUML_FILES
+        // Group results by Folder ? 
+        res.json({
+            count : matches.length,
+            results : matches
+        });
+    } catch (e) {
+        res.status(500)
+        res.json({code:"SERVER_ERROR", msg: e.msg }); 
+    }    
 });
 
 
@@ -268,41 +212,22 @@ function searchFilePattern(in_pattern){
     }
     return matches;
 }
-/*
-function buildAdaptorList(){
-    var adapt_dir_RE = /plt-[0-9]{3}[_|-](.*)$/
-    // build adapter List, stored in global Var.
-    console.log("Refreshing adaptorList");
-    var adapt_root_dir = path.join(global.repoRoot, KRM_PLATFORM_ROOT );
-    var list = fs.readdirSync(adapt_root_dir);
-    var matchs;
-    KMR_ADAPTORS = {};
-    list.forEach( (file)  => {
-        var stat = fs.statSync( path.join(adapt_root_dir, file) );
-        if ( stat && stat.isDirectory() ) { 
-            matchs = file.match(adapt_dir_RE);
-            if (matchs) {
-                KMR_ADAPTORS[ matchs[1].toLowerCase() ] = {
-                    name : matchs[1].toLowerCase(),
-                    path : path.join(KRM_PLATFORM_ROOT ,file)
-                };
-            }
-        }
-    });
-    setTimeout(buildAdaptorList, 60000);
-}
-// Load Adaptor list
-buildAdaptorList();
-*/
-function shouldRefreshPumls(){
-    if ( (Date.now()- LAST_REFRESH_TIMESTAMP) > REFRESH_PUML_LIST_FREQUENCY ) {
-        refreshPumlFiles();
+
+function getHashForDir(in_dir) {
+    var hash = 0, i, chr;
+    if (in_dir.length === 0) return hash;
+    for (i = 0; i < in_dir.length; i++) {
+      chr   = in_dir.charCodeAt(i);
+      hash  = ((hash << 5) - hash) + chr;
+      hash |= 0; // Convert to 32bit integer
     }
-}
+    return Math.abs(hash).toString(16);
+};
+  
 
 
 /* Browse a DIRECTORY , non recursively, splitting dirs and files*/
-var readdir = function(dir) {
+function readdir (dir) {
     var direlems={
         dirs : [],
         files : []
@@ -328,7 +253,7 @@ var readdir = function(dir) {
     return direlems;
 }
 
-var readPumlFiles = function(in_dir){
+function readPumlFiles (in_dir){
     results = [];
     let working_path = global.repoRoot;
     var pumlRE = "^(?!_)(.*).puml$";
@@ -351,7 +276,13 @@ var readPumlFiles = function(in_dir){
     return results;
 }
 
-var refreshPumlFiles = function(){
+
+function shouldRefreshPumls(){
+    if ( (Date.now()- LAST_REFRESH_TIMESTAMP) > REFRESH_PUML_LIST_FREQUENCY ) {
+        refreshPumlFiles();
+    }
+}
+function refreshPumlFiles (){
     PUML_FILES = readPumlFiles( KRM_PLATFORM_ROOT );
     console.log("Loading PUMLS: " + PUML_FILES.length);
     //setTimeout(refreshPumlFiles, REFRESH_PUML_LIST_FREQUENCY);
