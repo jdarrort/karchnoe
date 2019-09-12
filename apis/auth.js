@@ -13,7 +13,7 @@ router.get('/slackauthparams',  (req, res, next) => {
     var query_params = {
         scope : "identity.basic",
         client_id : CONFIG.AUTH.SLACK.client_id,
-        team : CONFIG.AUTH.SLACK.team_id,
+        team_id : CONFIG.AUTH.SLACK.team_id,
         redirect_uri : CONFIG.AUTH.SLACK.redirect_uri
 
     };
