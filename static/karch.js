@@ -5,6 +5,7 @@ document.addEventListener('click',   (event) => { if (event.clientX > 400) {hide
 window.onscroll = function() {
     if (G_CURRENT_TAB) {G_CURRENT_TAB.scroll = document.body.scrollTop; }
 };
+window.addEventListener("hashchange",function(event){ manageLoactionChange() },false);
   
 function toggleBrowser(){
     (document.getElementById('browser_active').style.display=='none') ? showBrowser(): hideBrowser();
@@ -153,7 +154,6 @@ async function manageLoactionChange (){
         return;
     }
 };
-window.addEventListener("hashchange",function(event){manageLoactionChange()},false);
 
 /********************* */
 // handle URL change in location hash, and trigger XHR
