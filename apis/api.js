@@ -306,10 +306,13 @@ var readdir = function(dir) {
         dirs : [],
         files : []
     };
-    working_dir = path.join(global.repoRoot, dir);
+    working_dir = path.join(global.repoRoot, dir?dir:"./");
     var list = fs.readdirSync(working_dir);
     list.forEach(function(file) {
-        var fullpath = dir + '/' + file;
+        var fullpath = file;
+        if (dir) {
+            fullpath = dir + '/' + fullpath;
+        } 
         var stat = fs.statSync(path.join(global.repoRoot, fullpath));
         if (stat && stat.isDirectory()) { 
             // Count elem in dir
@@ -318,7 +321,7 @@ var readdir = function(dir) {
             direlems.dirs.push({dirname : file, subcount : subcount, path : fullpath});
         } else {
             //its a file
-            direlems.files.push({filename : file, type : path.extname(file).substr(1), path : dir});
+            direlems.files.push({filename : file, type : path.extname(file).substr(1), path : dir, ref: [dir,file].join("/")});
         }
     });
     return direlems;
@@ -339,7 +342,7 @@ var readPumlFiles = function(in_dir){
         } else {
             //it is a file, chck if  (not_)*.puml
             if (elem.match(pumlRE)){
-                results.push( {filename : elem, type : "puml", path : in_dir} );
+                results.push( {filename : elem, type : "puml", path : in_dir, ref: in_dir+"/"+elem} );
             }
         }
     });

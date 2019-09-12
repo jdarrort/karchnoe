@@ -1,12 +1,13 @@
 
 document.addEventListener('keydown', (event) => { if (event.key == "Escape") toggleBrowser();});
-document.addEventListener('keydown', (event) => { if (event.key == "r") {G_CURRENT_TAB.refresh();cleanHash()} });
+document.addEventListener('keydown', (event) => { if (event.key == "r") {G_CURRENT_TAB.refresh(true); }} );
 document.addEventListener('click',   (event) => { if (event.clientX > 400) {hideBrowser()};});
 window.onscroll = function() {
     if (G_CURRENT_TAB) {G_CURRENT_TAB.scroll = document.body.scrollTop; }
 };
-window.addEventListener("hashchange",function(event){ manageLoactionChange() },false);
-  
+//window.addEventListener("hashchange",function(event){ manageLoactionChange() },false);
+window.addEventListener("hashchange",function(event){ manageHash() },false);
+
 function toggleBrowser(){
     (document.getElementById('browser_active').style.display=='none') ? showBrowser(): hideBrowser();
 }
@@ -102,81 +103,56 @@ function XXXCall(in_type, in_api, in_params, in_notjson) {
     })
 }
 
-function cleanHash  (){
-    // Hint to clean location.hash. Drawback : navigates on top...
-    // Call only if current hash has something
-    if (location.hash.length >2)
-    document.getElementById('fakelink').click();
+/********************* */
+function pathSplit(in_path){
+    let tmp = in_path.split("/");
+    let filename =tmp.splice(-1,1)[0] ;
+    return {
+        filename : filename,
+        path : tmp.join("/"),
+        type : filename.split(".").slice(-1)[0]
+    }
 }
 /********************* */
-// handle URL change, and trigger XHR
-async function manageLoactionChange (){
-    if (!location.hash) {return;}
-    console.log("Switching to " + location.hash)
-    var opt = processhref(location.hash);
-    // Saving current tab scroll
-    hideBrowser();
-    var res
-    try{
-        switch (opt.action){
-            case 'searchApi'  :
-                opt.params.type="api";
-                    res = await APICall("searchapi", opt.params);
-                    if (res.count == 1){
-                        renderPuml(res.results[0]);
-
-                    } else if (res.count == 0) {
-                        kAlert("","Could not find any match");
-
-                    } else {
-                        choseAmongProposition(res.results);
-                        kNotify("","Several possibilities");
-                    }
-                    console.log(res);
-                break;
-                case 'searchFile'  :
-                    res = await APICall("searchfile", opt.params);
-                    if (res.count == 1){
-                        renderPuml(res.results[0]);
-                    } else if (res.count == 0) {
-                        kAlert("","Could not find any match");
-
-                    } else {
-                        choseAmongProposition(res.results);
-                        kNotify("","Several possibilities");
-                    }
-                    console.log(res);
-                break;                
-            case 'searchMq'  :
-                break;
-        }
-    } catch (e) {
-        return;
+async function searchFile(in_file_pattern){
+    res = await APICall("searchfile", {filename : in_file_pattern});
+    if (res.count == 1){
+        //renderPuml(res.results[0]);
+        //getTab(res.results[0]);
+        window.location="#view?"+res.results[0].ref;
+    } else if (res.count == 0) {
+        kAlert("","Could not find any match");
+    } else {
+        choseAmongProposition(res.results);
+        kNotify("","Several possibilities");
     }
-};
+}
 
 /********************* */
-// handle URL change in location hash, and trigger XHR
-function processhref(in_href){
-    if (/^#authentication_failed/.test(in_href)){
+function manageHash (){
+    let cur_hash = location.hash;
+    if (/^#authentication_failed/.test(cur_hash)){
         kAlert("Authentication Failed","");
-        cleanHash();
+        //cleanHash();
         askForAuthentication();
         return;
+    } else if (/^#searchFile\?/.test(cur_hash)){
+        searchFile(cur_hash.replace(/^#searchFile\?/,""));
+        return;
+    } else if (/^#view\?/.test(cur_hash)){
+        let file = cur_hash.replace(/^#view\?/,"");
+        let tab = getTabByRef(file);
+        if (tab) {
+            tab.activate();
+        } else {
+            getTab( pathSplit(file) );
+        }
+        return;
+    } else{
+        console.warn("Unknown hash : " + location.hash);
     }
-    // Interpret path :
-    var matchs= in_href.match(/#(.*)\?(.*)/);
-    var action, tmp_params, params={}
-    if (matchs){
-        action = matchs[1];
-        tmp_params = matchs[2];
-        tmp_params.split("&").forEach( p => {
-            let o = p.split("=");
-            params[o[0]] = o[1];
-        })
-    }
-    return {action : action, params : params}
-};
+}
+
 /********************* */
 function formatParams( params ){
     return "?" + Object.keys(params).map(function(key){
@@ -200,11 +176,10 @@ function choseAmongProposition(in_files){
             li_el.title = file.path;
             li_el.addEventListener("click", function(e){
                 e.stopPropagation();
-                renderPuml(file);
+                window.location = "#view?" + file.ref;
             });
         }
     });    
-
 }
 
 
@@ -252,16 +227,17 @@ async function renderDirContent( in_el, in_dir_path){
         switch (file.type) {
             case "puml" :
                 li_el.classList.add("puml");
+                li_el.href
                 li_el.addEventListener("click", function(e){
                     e.stopPropagation();
-                    renderPuml(file);
+                    window.location="#view?"+file.ref;
                 });
                 break;
             case "md" :
                 li_el.classList.add("md");
                 li_el.addEventListener("click", function(e){
                     e.stopPropagation();
-                    renderMd(file);
+                    window.location="#view?"+file.ref;
                 });
                 break;
         }
@@ -269,17 +245,10 @@ async function renderDirContent( in_el, in_dir_path){
 }
 
 /********************* */
-async function renderPuml (in_file){
-    getTab(in_file).setContentEl( getLoadingImg(30) );
-    getTab(in_file).setContentHtml( await refreshPuml(in_file, true) );
-    cleanHash();
-}
-/********************* */
-async function refreshPuml (in_file, no_refresh ){
+async function refreshPuml (in_file, in_force ){
     try {
-        let should_refresh = no_refresh ? false : true;
         let request = { file : in_file.filename, dir : in_file.path };
-        if (should_refresh) {request.force = true;}
+        if (in_force === true ) { request.force = true; }
         return  await APICall( "getsvgfromfile", request, true);
         }
     catch (e) {
@@ -329,14 +298,17 @@ function getTab(in_file){
     var NEW_TAB = {
         id : TAB_ID++,
         file : in_file,
+        type : in_file.type,
         tab_ref : tab_ref,
         tab_but_el : document.createElement("button"),
         tab_content_el : document.createElement("div"),
         tab_svg_el : document.createElement("div"),
         scroll : 0,
-        async refresh () {
+        async refresh ( in_force ) {
             this.setContentEl( getLoadingImg(30) );
-            this.setContentHtml( await refreshPuml(this.file, false));
+            if (this.type.toLowerCase() == "puml"){
+                this.setContentHtml( await refreshPuml( this.file, in_force || false ) );
+            }
             this.scroll = 0;
         },
         deactivate () { 
@@ -352,7 +324,8 @@ function getTab(in_file){
         delete () {
             this.tab_but_el.remove();
             this.tab_content_el.remove();
-            delete LOADED_TABS[this.id];    
+            delete LOADED_TABS[this.id]; 
+            window.location="#";
         },
         setContentHtml (new_content)  {
             console.log("Start rendering SVG");
@@ -377,10 +350,7 @@ function getTab(in_file){
     // Header to force reload
     var content_refresh_el = document.createElement("div");
     content_refresh_el.innerText = "(hit 'r' to refresh)";
-    content_refresh_el.style.cursor = "pointer";
-    content_refresh_el.addEventListener('click', e => {
-        refreshPuml(in_file, content_svg_el);
-    })
+    
     NEW_TAB.tab_content_el.appendChild(content_refresh_el);
 
     // Will hold svg image
@@ -390,16 +360,19 @@ function getTab(in_file){
 
     // when click on the tab button
     NEW_TAB.tab_but_el.addEventListener("click", function(e){ 
-        NEW_TAB.activate();
+        window.location = "#view?" + tab_ref;
+        //NEW_TAB.activate();
     });
     // when Dblclick on the tab button --> Remove it
     NEW_TAB.tab_but_el.addEventListener("dblclick", function(e){ 
         NEW_TAB.delete();
     });
-    LOADED_TABS[NEW_TAB.id] = NEW_TAB;
+    LOADED_TABS[ NEW_TAB.id ] = NEW_TAB;
     NEW_TAB.activate();
+    NEW_TAB.refresh();
     return NEW_TAB;
 }
+
 async function sendSearch ()  {
     var search_str = document.getElementById("i_search").value;
     res = await APICall("searchfile", {filename : search_str});
@@ -418,8 +391,11 @@ var LOADED_TABS = {};
 var G_CURRENT_TAB;
 window.onload = async function(){
     //handleAuthent()
-    renderDirContent(document.getElementById("root_dir"), ".");
-    manageLoactionChange();
+    renderDirContent(document.getElementById("root_dir"), "");
+    if (location.hash) {
+        manageHash();
+    }
+    //manageLoactionChange();
     console.log(root_dir);
     // handle search.
     document.getElementById("i_search").addEventListener("keypress", event =>  {
