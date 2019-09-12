@@ -1,12 +1,10 @@
 
-document.addEventListener('keydown', (event) => {
-    if (event.key == "Escape") toggleBrowser();
-});
-document.addEventListener('keydown', (event) => {
-    if (event.key == "r") {G_CURRENT_TAB.refresh();cleanHash()}
-});
-window.onscroll = function() {if (G_CURRENT_TAB) {G_CURRENT_TAB.scroll = document.body.scrollTop; }};
-
+document.addEventListener('keydown', (event) => { if (event.key == "Escape") toggleBrowser();});
+document.addEventListener('keydown', (event) => { if (event.key == "r") {G_CURRENT_TAB.refresh();cleanHash()} });
+document.addEventListener('click',   (event) => { if (event.clientX > 400) {hideBrowser()};});
+window.onscroll = function() {
+    if (G_CURRENT_TAB) {G_CURRENT_TAB.scroll = document.body.scrollTop; }
+};
   
 function toggleBrowser(){
     (document.getElementById('browser_active').style.display=='none') ? showBrowser(): hideBrowser();
@@ -162,6 +160,8 @@ window.addEventListener("hashchange",function(event){manageLoactionChange()},fal
 function processhref(in_href){
     if (/^#authentication_failed/.test(in_href)){
         kAlert("Authentication Failed","");
+        cleanHash();
+        askForAuthentication();
         return;
     }
     // Interpret path :
@@ -400,7 +400,11 @@ function getTab(in_file){
     NEW_TAB.activate();
     return NEW_TAB;
 }
-
+async function sendSearch ()  {
+    var search_str = document.getElementById("i_search").value;
+    res = await APICall("searchfile", {filename : search_str});
+    choseAmongProposition(res.results);
+}
 
 
 /********************* */
@@ -418,9 +422,8 @@ window.onload = async function(){
     manageLoactionChange();
     console.log(root_dir);
     // handle search.
-    document.getElementById("b_search").addEventListener("click", async function()  {
-        var search_str = document.getElementById("i_search").value;
-        res = await APICall("searchfile", {filename : search_str});
-        choseAmongProposition(res.results);
+    document.getElementById("i_search").addEventListener("keypress", event =>  {
+        if (event.keyCode == "13") {sendSearch();}
     })
+    document.getElementById("b_search").addEventListener("click", sendSearch)
 }
