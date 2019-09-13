@@ -136,10 +136,10 @@ function manageHash (){
         askForAuthentication();
         return;
     } else if (/^#searchFile\?/.test(cur_hash)){
-        searchFile(cur_hash.replace(/^#searchFile\?/,""));
+        searchFile( decodeURI(cur_hash.replace(/^#searchFile\?/,"")) );
         return;
     } else if (/^#view\?/.test(cur_hash)){
-        let file = cur_hash.replace(/^#view\?/,"");
+        let file = decodeURI(cur_hash.replace(/^#view\?/,""));
         let tab = getTabByRef(file);
         if (tab) {
             tab.activate();
