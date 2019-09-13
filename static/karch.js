@@ -1,6 +1,5 @@
 
 document.addEventListener('keydown', (event) => { if (event.key == "Escape") toggleBrowser();});
-document.addEventListener('keydown', (event) => { if (event.key == "r") {G_CURRENT_TAB.refresh(true); }} );
 document.addEventListener('click',   (event) => { if (event.clientX > 400) {hideBrowser()};});
 window.onscroll = function() {
     if (G_CURRENT_TAB) {G_CURRENT_TAB.scroll = document.body.scrollTop; }
@@ -299,6 +298,7 @@ function getTab(in_file){
         id : TAB_ID++,
         file : in_file,
         type : in_file.type,
+        active : false,
         tab_ref : tab_ref,
         tab_but_el : document.createElement("button"),
         tab_content_el : document.createElement("div"),
@@ -314,12 +314,14 @@ function getTab(in_file){
         deactivate () { 
             this.tab_but_el.classList.remove("active");
             this.tab_content_el.style.display = "none";
+            this.active = false;
         },
         activate() {
             Object.keys(LOADED_TABS).forEach((id) => {LOADED_TABS[id].deactivate();});
             this.tab_content_el.style.display = "block";
             this.tab_but_el.classList.add("active");
             G_CURRENT_TAB = this;
+            this.active = true;
         },
         delete () {
             this.tab_but_el.remove();
@@ -349,7 +351,11 @@ function getTab(in_file){
 
     // Header to force reload
     var content_refresh_el = document.createElement("div");
-    content_refresh_el.innerText = "(hit 'r' to refresh)";
+    content_refresh_el.innerHTML = "<b>(Force Refresh)</b>";
+    content_refresh_el.style.cursor = "pointer";
+    content_refresh_el.addEventListener("click", () => {
+        NEW_TAB.refresh(true); 
+    }) 
     
     NEW_TAB.tab_content_el.appendChild(content_refresh_el);
 
@@ -375,6 +381,7 @@ function getTab(in_file){
 
 async function sendSearch ()  {
     var search_str = document.getElementById("i_search").value;
+    search_str = search_str.replace(/ /g,"*");
     res = await APICall("searchfile", {filename : search_str});
     choseAmongProposition(res.results);
 }
@@ -399,6 +406,7 @@ window.onload = async function(){
     console.log(root_dir);
     // handle search.
     document.getElementById("i_search").addEventListener("keypress", event =>  {
+        event.stopPropagation()
         if (event.keyCode == "13") {sendSearch();}
     })
     document.getElementById("b_search").addEventListener("click", sendSearch)
