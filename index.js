@@ -25,13 +25,12 @@ app.use("/",  express.static( "static" ) );
 // Enrich res with specific methods
 app.use(function (error, req, res, next) {
     res.status(500)
-    res.json( { code : "SERVER_ERROR", msg: "    " } ); 
+    res.json( { code : "SERVER_ERROR", msg: error.msg } ); 
 });
 
 // serve APIs
 app.use( "/auth", require("./apis/auth"));    
 app.use( "/api", LIBAUTH.authorize, require("./apis/api") );
-
 
 
 // Start server

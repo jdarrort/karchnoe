@@ -244,7 +244,7 @@ async function renderDirContent( in_el, in_dir_path){
 }
 
 /********************* */
-async function refreshPuml (in_file, in_force ){
+async function retrievePuml (in_file, in_force ){
     try {
         let request = { file : in_file.filename, dir : in_file.path };
         if (in_force === true ) { request.force = true; }
@@ -256,13 +256,15 @@ async function refreshPuml (in_file, in_force ){
     }
 }
 /********************* */
-async function renderMd (in_file){
+async function retrieveMd (in_file){
     var tab = getTab(in_file);
     try {
         var md_data = await APICall("getmdfile",{file : in_file.filename, dir : in_file.path}, true);
         var converter = new showdown.Converter();
-        var md_html = converter.makeHtml(md_data);
-        tab.setContentHtml( md_html );
+        var md_el = document.createElement("div")
+        md_el.innerHTML = converter.makeHtml(md_data);
+        md_el.style.textAlign="initial";
+        return md_el;
     }
     catch (e) {
         console.error("Failed to retrieve MD");
@@ -306,8 +308,13 @@ function getTab(in_file){
         scroll : 0,
         async refresh ( in_force ) {
             this.setContentEl( getLoadingImg(30) );
-            if (this.type.toLowerCase() == "puml"){
-                this.setContentHtml( await refreshPuml( this.file, in_force || false ) );
+            switch (this.type.toLowerCase()){
+                case "puml": 
+                    this.setContentHtml( await retrievePuml( this.file, in_force || false ) );
+                    break;
+                case "md" :
+                    this.setContentEl( await retrieveMd( this.file ) );
+                    break;
             }
             this.scroll = 0;
         },

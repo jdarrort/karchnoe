@@ -3,11 +3,9 @@ var router = require('express').Router();
 var fs = require('fs');
 var path = require('path');
 const { exec } = require('child_process');
-const lineReader = require('line-reader');
 
 const REFRESH_PUML_LIST_FREQUENCY = 10000;
 const KRM_PLATFORM_ROOT = "platform"
-var KMR_ADAPTORS= {};
 var PUML_FILES = [];
 
 var LAST_REFRESH_TIMESTAMP
@@ -16,6 +14,9 @@ var LAST_REFRESH_TIMESTAMP
 
 
 /********************* */
+/*
+- dir : path (from karch_root)
+ */
 router.get('/browsedir',  (req, res, next) => {
     try {
         shouldRefreshPumls();
@@ -99,9 +100,9 @@ router.get('/getsvgfromfile',  (req, res, next) => {
 
 /********************* */
 /*
-- file : filename 
 - dir : path from karch_root
- */
+- file : filename 
+*/
 router.get('/getmdfile',  (req, res, next) => {
     var full_file_path = path.join(global.repoRoot,  req.query.dir,  req.query.file);
     // get puml file if exists
@@ -123,6 +124,7 @@ router.get('/getmdfile',  (req, res, next) => {
 - verb  :  get/post/delete/... 
 - ref : apiCode / eventCode
  */
+/* replaced with searchfile
 router.get('/searchapi',  (req, res, next) => {
     try {
         shouldRefreshPumls();
@@ -138,7 +140,7 @@ router.get('/searchapi',  (req, res, next) => {
         res.json({code:"SERVER_ERROR", msg: e.msg }); 
     }
 });
-
+*/
 
 /********************* */
 /*  Search a PUML file from filename reference
@@ -289,7 +291,9 @@ function refreshPumlFiles (){
     LAST_REFRESH_TIMESTAMP = Date.now(); 
 }
 
+//==========================
 // Init
+//==========================
 refreshPumlFiles();
 
 module.exports = router;
