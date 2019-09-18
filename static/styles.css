@@ -76,7 +76,8 @@ body{
     z-index:200;
   }
 
-  ul.browser      { list-style-type: none;  margin-left: 15px;  margin-right: 15px; padding:0px;border:0px;}
+  ul.browser         { list-style-type: none;  margin-left: 15px;  margin-right: 15px; padding:0px;border:0px;}
+  ul.browser ul      { list-style-type: none;  margin-left: 15px;  margin-right: 15px; padding:0px;border:0px;}
   ul.browser li      { background-color: #d2e3fb;font-weight: normal}
   ul.browser li:hover{ background-color:azure}
   ul.browser li.file { padding-left : 20px;cursor:default;}
