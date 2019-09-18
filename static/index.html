@@ -21,7 +21,7 @@
             <hr>
             Search : <input type="text" size="25" id="i_search"> <button id="b_search">Search</button>
             <hr>
-            <ul id="root_dir"></ul>
+            <ul id="root_dir" class="browser"></ul>
             <ul><li onclick="logout()" style="cursor:pointer"><b>Logout</b></li></ul>
         </div>
     </div>
@@ -40,14 +40,17 @@
     </div>
 
 
+    <!-- MENU -->
     <div id="menu" style="display:none"> 
       <div style="text-align:center;margin-right:30px;">
         <b>Matching files :</b>
         <span class="closebtn" onclick="document.getElementById('menu').style.display='none';">&times;</span> 
       </div>
       <hr>
-      <div><ul id="menu_content"></ul></div>
+      <div><ul id="menu_content" class="browser"></ul></div>
     </div>
+
+
     <div id="signin" style="display:none">
       <a href="javascript:signInWithSlack()">
         <img alt="Sign in with Slack" height="40" width="172" 

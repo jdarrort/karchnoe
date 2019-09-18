@@ -5,7 +5,7 @@ var path = require('path');
 const { exec } = require('child_process');
 
 const REFRESH_PUML_LIST_FREQUENCY = 10000;
-const KRM_PLATFORM_ROOT = "platform"
+const KRM_PLATFORM_ROOT = ""
 var PUML_FILES = [];
 
 var LAST_REFRESH_TIMESTAMP
@@ -249,27 +249,46 @@ function readdir (dir) {
             direlems.dirs.push({dirname : file, subcount : subcount, path : fullpath});
         } else {
             //its a file
-            direlems.files.push({filename : file, type : path.extname(file).substr(1), path : dir, ref: [dir,file].join("/")});
+            direlems.files.push({
+                filename : file, 
+                type : getFileType(file),
+                path : dir, 
+                ref  : [dir,file].join("/")
+            });
         }
     });
     return direlems;
 }
 
+function getFileType(in_filename){
+    let extension = in_filename.split(".").slice(-1)[0].toLowerCase();
+    switch (extension) {
+        case "plantuml":
+        case "puml":
+            return "puml";
+            break;
+        case "md" : 
+            return "md";
+            break;
+        default : "other";
+    }
+}
+
 function readPumlFiles (in_dir){
     results = [];
     let working_path = global.repoRoot;
-    var pumlRE = "^(?!_)(.*).puml$";
+    var pumlRE = "^(?!_)(.*).p(lant){0,1}uml$";
     if (! fs.existsSync( path.join(working_path, in_dir) ) ) {
         return false;
     }
     var dir_content = fs.readdirSync( path.join(working_path, in_dir));
     dir_content.forEach(function(elem) {    
+        //console.log(elem);
         var stat = fs.statSync( path.join(working_path, in_dir,elem) );
         if (stat && stat.isDirectory()) { 
             results = results.concat( readPumlFiles( path.join(in_dir, elem) ));
         } else {
-            //it is a file, chck if  (not_)*.puml
-            if (elem.match(pumlRE)){
+            if ( getFileType(elem) == "puml" ){
                 results.push( {filename : elem, type : "puml", path : in_dir, ref: in_dir+"/"+elem} );
             }
         }

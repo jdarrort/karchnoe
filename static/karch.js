@@ -109,7 +109,7 @@ function pathSplit(in_path){
     return {
         filename : filename,
         path : tmp.join("/"),
-        type : filename.split(".").slice(-1)[0]
+        type : getFileType(filename)
     }
 }
 /********************* */
@@ -182,7 +182,7 @@ function choseAmongProposition(in_files){
 }
 
 
-/********************* */
+/* **************************************** */
 async function renderDirContent( in_el, in_dir_path){
     in_el.appendChild(getLoadingImg(25) ); 
     try{
@@ -243,7 +243,7 @@ async function renderDirContent( in_el, in_dir_path){
     });
 }
 
-/********************* */
+/* **************************************** */
 async function retrievePuml (in_file, in_force ){
     try {
         let request = { file : in_file.filename, dir : in_file.path };
@@ -255,7 +255,7 @@ async function retrievePuml (in_file, in_force ){
         return "/!\\ Failed to load /!\\<br>" + e.detail;
     }
 }
-/********************* */
+/***************************************** */
 async function retrieveMd (in_file){
     var tab = getTab(in_file);
     try {
@@ -271,7 +271,7 @@ async function retrieveMd (in_file){
         tab.setContentHtml( "/!\\ Failed to load /!\\" );
     }
 }
-/********************* */
+/***************************************** */
 function getLoadingImg(in_size){
     var i = document.createElement("img");
     i.classList.add("loading");
@@ -391,6 +391,20 @@ async function sendSearch ()  {
     search_str = search_str.replace(/ /g,"*");
     res = await APICall("searchfile", {filename : search_str});
     choseAmongProposition(res.results);
+}
+
+function getFileType(in_filename){
+    let extension = in_filename.split(".").slice(-1)[0].toLowerCase();
+    switch (extension) {
+        case "plantuml":
+        case "puml":
+            return "puml";
+            break;
+        case "md" : 
+            return "md";
+            break;
+        default : "other";
+    }
 }
 
 
