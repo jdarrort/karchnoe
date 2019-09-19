@@ -5,11 +5,10 @@ var path = require('path');
 const { exec } = require('child_process');
 
 const REFRESH_PUML_LIST_FREQUENCY = 10000;
-const KRM_PLATFORM_ROOT = ""
+const KRM_PLATFORM_ROOT = "platform"
 var PUML_FILES = [];
 
 var LAST_REFRESH_TIMESTAMP
-
 /********************* */
 
 
@@ -273,7 +272,8 @@ function getFileType(in_filename){
         default : "other";
     }
 }
-
+/* DEPRECATED
+WAS FULLY SYNC, affecting service availability */
 function readPumlFiles (in_dir){
     results = [];
     let working_path = global.repoRoot;
@@ -293,9 +293,38 @@ function readPumlFiles (in_dir){
             }
         }
     });
-    //console.log("Nb puml in platform/ : " + results.length);
     return results;
 }
+
+async function readPumlFilesAsync (in_dir){
+    var results = [];
+    let working_path = global.repoRoot;
+    if (! fs.existsSync( path.join(working_path, in_dir) ) ) {
+        return false;
+    }
+    var dir_content = await new Promise((resolve,reject) => { 
+         fs.readdir( path.join(working_path, in_dir), function(err,files){ 
+            if (!err) 
+                resolve(files); 
+            else reject(err);
+        });
+    });
+    for (let i=0; i < dir_content.length; i++) {
+        let elem = dir_content[i];
+        if (/^\./.test(elem)) continue;
+        var stat = fs.statSync( path.join(working_path, in_dir,elem) );
+        if (stat && stat.isDirectory()) { 
+            let child_results = await readPumlFilesAsync( path.join(in_dir, elem) );
+            results = results.concat( child_results );
+        } else {
+            if ( getFileType(elem) == "puml" ){
+                results.push( {filename : elem, type : "puml", path : in_dir, ref: in_dir+"/"+elem} );
+            }
+        }
+    }
+    return results;
+}
+
 
 
 function shouldRefreshPumls(){
@@ -303,11 +332,14 @@ function shouldRefreshPumls(){
         refreshPumlFiles();
     }
 }
-function refreshPumlFiles (){
-    PUML_FILES = readPumlFiles( KRM_PLATFORM_ROOT );
-    console.log("Loading PUMLS: " + PUML_FILES.length);
-    //setTimeout(refreshPumlFiles, REFRESH_PUML_LIST_FREQUENCY);
-    LAST_REFRESH_TIMESTAMP = Date.now(); 
+async function refreshPumlFiles (){
+    let start_time =  Date.now() ;
+    console.log("Start Refreshing PUML list" );
+    var TMP_PUML_FILES = await readPumlFilesAsync( "" );
+    let duration = Date.now() - start_time;
+    console.log("Nb pumls loaded : " + TMP_PUML_FILES.length +", duration=" + duration);
+    PUML_FILES = TMP_PUML_FILES;
+    setTimeout(refreshPumlFiles, 60000);
 }
 
 //==========================
