@@ -1,5 +1,5 @@
 const CONFIG= {
-    PORT : 80,
+    HTTP_PORT : 80,
     HTTPS : {
         ca : "/PATH_TO/chain.pem", 
         cert : "/PATH_TO/cert.pem", 
