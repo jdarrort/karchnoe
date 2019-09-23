@@ -6,7 +6,9 @@ var router = require('express').Router();
 var CONFIG = require("../config/config");
 var LIBAUTH = require("../lib/libauth");
 const https = require('https');
-
+/*const bodyParser = require('body-parser');
+router.use(bodyParser.urlencoded({ extended: true }));
+*/
 
 /********************* */
 router.get('/slackauthparams',  (req, res, next) => {
@@ -30,9 +32,11 @@ router.get('/azureauthparams',  (req, res, next) => {
     // query params
     var query_params = {
         scope : CONFIG.AUTH.AZURE.scope,
+        locataire : CONFIG.AUTH.AZURE.tenant_id,
         client_id : CONFIG.AUTH.AZURE.client_id,
-        response_type : "id_token",
+        response_type : "code",
         redirect_uri : CONFIG.AUTH.AZURE.redirect_uri,
+        response_mode : "query",
         nonce : "JULIEN"
     };
     res.send( {
@@ -55,37 +59,39 @@ router.get('/checksession',  (req, res, next) => {
 /********************* */
 router.get('/fromazure',  (req, res, next) => {
     console.log(req.query);
-    console.log(req.path);
-    var attrs_raw = req.path.split("#")[1].split("&");
-    var attrs = {}
-    attrs_raw.forEach((attr) => {
-        let tmp = attr.split("=");
-        attrs[tmp[0]] = decodeURIComponent( tmp[1]);
-    });
-    console.log("Extracted params : " + attrs.length);
-    console.log(attrs);
-
     try {
         var query_params_obj = {
-            code : attrs["id_token"],
+            code : req.query.code,
+            grant_type : "authorization_code",
+            locataire : CONFIG.AUTH.AZURE.tenant_id,
             client_id : CONFIG.AUTH.AZURE.client_id,
             client_secret : CONFIG.AUTH.AZURE.client_secret,
             redirect_uri : CONFIG.AUTH.AZURE.redirect_uri
         };        
-        var azure_path = CONFIG.AUTH.AZURE.path  + Object.keys(query_params_obj).map(p => {
-            return p + "=" + encodeURIComponent(query_params_obj[p]);
-        }).join("&");
+        var form_datas_array=[];
+        Object.keys(query_params_obj).forEach(att => {
+            form_datas_array.push(att +"="+query_params_obj[att]);
+        });
+        form_datas = form_datas_array.join("&");
+        var azure_token_url = CONFIG.AUTH.AZURE.path;
 
         var authReply={};
+        var options = {
+            host: CONFIG.AUTH.AZURE.host,
+            path: CONFIG.AUTH.AZURE.path,
+            port: 443,
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+              'Content-Length': form_datas.length
+            }
+        };         
         // must check scope against SLACK
-        const slackreq = https.get(azure_path, (azure_reply) => {
+        const slackreq = https.request( options, (azure_reply) => {
             const { statusCode } = azure_reply;
             const contentType = azure_reply.headers['content-type'];
             let error;
-            if (statusCode !== 200) {
-                error = new Error('Request Failed.\n' +
-                                `Status Code: ${statusCode}`);
-            } else if (!/^application\/json/.test(contentType)) {
+             if (!/^application\/json/.test(contentType)) {
                 error = new Error('Invalid content-type.\n' +
                                 `Expected application/json but received ${contentType}`);
             }
@@ -95,30 +101,41 @@ router.get('/fromazure',  (req, res, next) => {
                 azure_reply.resume();
                 return;
             }
-
             azure_reply.setEncoding('utf8');
             let rawData = '';
             azure_reply.on('data', (chunk) => {rawData += chunk;});
             azure_reply.on('end', () => {
-            console.log(rawData);
-            console.log("----JSONIFY----");
-            authReply = JSON.parse(rawData);
-            console.log(authReply);
+                if (statusCode !== 200) {
+                    error = new Error('Request Failed.\n' +
+                                    `Status Code: ${statusCode}`);
+                    console.log(error);
+                    res.redirect('/#authentication_failed');
+                    return;
+                }
+    /*
+                console.log(rawData);
+                console.log("----JSONIFY----");*/
+                authReply = JSON.parse(rawData);
+                //console.log(authReply);
 
-            if (authReply.ok == true){
-                res.cookie('karch_session', LIBAUTH.getAccessToken(), { maxAge: 60*1000*120, httpOnly: false });
-                res.redirect('/'+attrs["state"] || "");
-            } else {
-                // invalid access code
-                res.redirect('/#authentication_failed');
-            }
-            // Added to redirect to right page 
-            //res.redirect('/');
+                if ( authReply.expires_in ){
+                    res.cookie('karch_session', LIBAUTH.getAccessToken(), { maxAge: 60*1000*120, httpOnly: false });
+                    res.redirect('/'+req.query["state"] || "");
+                } else {
+                    // invalid access code
+                    res.redirect('/#authentication_failed');
+                }
+                // Added to redirect to right page 
+                //res.redirect('/');
             });
-        }).on('error', (e) => {
+        });
+        slackreq.on('error', (e) => {
             console.error(`Got error: ${e.message}`);
             // don't do anything here... would cause ECONNRESET and crash
+            res.redirect('/#authentication_failed');
         });
+        slackreq.write(form_datas);
+        slackreq.end();        
     }
     catch (e){
         console.error(e.message);

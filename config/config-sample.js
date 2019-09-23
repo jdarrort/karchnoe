@@ -18,7 +18,8 @@ const CONFIG= {
             redirect_uri: "http://GIVE_IT/auth/fromslack2"
         },
         AZURE : {
-            path : "https://login.microsoftonline.com/MY_TENANT_ID/oauth2/v2.0/authorize??",
+            host: "login.microsoftonline.com",
+            path : "/MY_TENANT_ID/oauth2/v2.0/authorize??",
             client_id :  "GIVE_IT",
             client_secret: "",
             redirect_uri: "http://GIVE_IT/auth/fromslack2",
