@@ -1,5 +1,10 @@
 const CONFIG= {
     PORT : 80,
+    HTTPS : {
+        ca : "/PATH_TO/chain.pem", 
+        cert : "/PATH_TO/cert.pem", 
+        private_key : "/PATH_TO/privkey.pem" 
+    },
     AT_PWD : "CHOSE A RANDOM PASSWORD FOR CRYPTING KARCHNOETOKEN",
     AUTH : {
         DISABLE : false, // set it to true for no AUTH at all.

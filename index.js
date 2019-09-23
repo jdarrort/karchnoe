@@ -8,7 +8,6 @@ var app = express();
 const LIBAUTH = require("./lib/libauth");
 const CONFIG = require("./config/config");
 
-
 var port ;
 process.argv.forEach( (arg, i) => {let v = arg.match(/^--port=(.*)/); if (v) {port = v[1];}});
 const C_SERVER_PORT = process.env["KARCH_PORT"] || port ||  CONFIG.PORT || 80 ;
@@ -33,7 +32,18 @@ app.use( "/auth", require("./apis/auth"));
 app.use( "/api", LIBAUTH.authorize, require("./apis/api") );
 
 
-// Start server
-app.listen(C_SERVER_PORT, function () {
-    console.log( 'KARCH  listening on port ' + C_SERVER_PORT )
-});
+if (CONFIG.HTTPS) {
+const fs = require("fs");
+const https = require("https");
+const httsServer = https.createServer({
+     key : fs.readFileSync(CONST.HTTPS.private_key),
+     ca : fs.readFileSync(CONST.HTTPS.ca),
+     cert : fs.readFileSync(CONST.HTTPS.cert)
+ }, app);
+} else {
+    // Start server
+    app.listen(C_SERVER_PORT, function () {
+        console.log( 'KARCH  listening on port ' + C_SERVER_PORT )
+    });
+
+}
