@@ -30,12 +30,12 @@ router.get('/azureauthparams',  (req, res, next) => {
     // query params
     var query_params = {
         scope : CONFIG.AUTH.AZURE.scope,
-        client_id : CONFIG.AUTH.AZURE.client_id/*,
-        redirect_uri : CONFIG.AUTH.AZURE.redirect_uri*/
-
+        client_id : CONFIG.AUTH.AZURE.client_id,
+        response_type : "id_token",
+        redirect_uri : CONFIG.AUTH.AZURE.redirect_uri
     };
     res.send( {
-        auth_url : "https://login.microsoftonline.com/" + CONFIG.AUTH.AZURE.tenant_id + "/oauth2/v2.0/authorize?" + Object.keys(query_params).map(p => {return p + "=" + encodeURIComponent(query_params[p]);}).join("&")
+        auth_url : "https://login.microsoftonline.com/" + CONFIG.AUTH.AZURE.tenant_id + "/oauth2/authorize?" + Object.keys(query_params).map(p => {return p + "=" + encodeURIComponent(query_params[p]);}).join("&")
     });
 })
 
