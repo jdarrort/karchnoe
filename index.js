@@ -36,9 +36,9 @@ if (CONFIG.HTTPS) {
 const fs = require("fs");
 const https = require("https");
 const httsServer = https.createServer({
-     key : fs.readFileSync(CONST.HTTPS.private_key),
-     ca : fs.readFileSync(CONST.HTTPS.ca),
-     cert : fs.readFileSync(CONST.HTTPS.cert)
+     key : fs.readFileSync(CONFIG.HTTPS.private_key),
+     ca : fs.readFileSync(CONFIG.HTTPS.ca),
+     cert : fs.readFileSync(CONFIG.HTTPS.cert)
  }, app);
 } else {
     // Start server
