@@ -9,6 +9,7 @@
   "author": "J.Darrort (ACV)",
   "license": "ISC",
   "dependencies": {
+    "atob": "^2.1.2",
     "express": "^4.17.1"
   }
 }

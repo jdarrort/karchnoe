@@ -58,7 +58,6 @@ router.get('/checksession',  (req, res, next) => {
 
 /********************* */
 router.get('/fromazure',  (req, res, next) => {
-    console.log(req.query);
     try {
         var query_params_obj = {
             code : req.query.code,
@@ -73,7 +72,6 @@ router.get('/fromazure',  (req, res, next) => {
             form_datas_array.push(att +"="+query_params_obj[att]);
         });
         form_datas = form_datas_array.join("&");
-        var azure_token_url = CONFIG.AUTH.AZURE.path;
 
         var authReply={};
         var options = {
@@ -117,6 +115,10 @@ router.get('/fromazure',  (req, res, next) => {
                 console.log("----JSONIFY----");*/
                 authReply = JSON.parse(rawData);
                 //console.log(authReply);
+                // getUserFrom IDToken
+                var temp = JSON.parse(require('atob')(authReply.id_token.split(".")[1]));
+
+                var username = temp.name;
 
                 if ( authReply.expires_in ){
                     res.cookie('karch_session', LIBAUTH.getAccessToken(), { maxAge: 60*1000*120, httpOnly: false });
