@@ -55,9 +55,19 @@ router.get('/checksession',  (req, res, next) => {
 /********************* */
 router.get('/fromazure',  (req, res, next) => {
     console.log(req.query);
+    console.log(req.path);
+    var attrs_raw = req.path.split("#")[1].split("&");
+    var attrs = {}
+    attrs_raw.forEach((attr) => {
+        let tmp = attr.split("=");
+        attrs[tmp[0]] = decodeURIComponent( tmp[1]);
+    });
+    console.log("Extracted params : " + attrs.length);
+    console.log(attrs);
+
     try {
         var query_params_obj = {
-            code : req.query["code"],
+            code : attrs["id_token"],
             client_id : CONFIG.AUTH.AZURE.client_id,
             client_secret : CONFIG.AUTH.AZURE.client_secret,
             redirect_uri : CONFIG.AUTH.AZURE.redirect_uri
@@ -90,12 +100,14 @@ router.get('/fromazure',  (req, res, next) => {
             let rawData = '';
             azure_reply.on('data', (chunk) => {rawData += chunk;});
             azure_reply.on('end', () => {
+            console.log(rawData);
+            console.log("----JSONIFY----");
             authReply = JSON.parse(rawData);
             console.log(authReply);
 
             if (authReply.ok == true){
                 res.cookie('karch_session', LIBAUTH.getAccessToken(), { maxAge: 60*1000*120, httpOnly: false });
-                res.redirect('/'+req.param("state") || "");
+                res.redirect('/'+attrs["state"] || "");
             } else {
                 // invalid access code
                 res.redirect('/#authentication_failed');
