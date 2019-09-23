@@ -42,7 +42,7 @@ const https = require("https");
         cert : fs.readFileSync(CONFIG.HTTPS.cert)
     };
     console.log("prepared credentials");
-    const httpsServer = https.createServer(credentials, app);
+    const httpsServer = https.createServer(credentials, app).listen(443);
 } else {
     // Start server
     console.log("Starting HTTPS");
