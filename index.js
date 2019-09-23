@@ -33,15 +33,19 @@ app.use( "/api", LIBAUTH.authorize, require("./apis/api") );
 
 
 if (CONFIG.HTTPS) {
+    console.log("Starting HTTPS");
 const fs = require("fs");
 const https = require("https");
-const httsServer = https.createServer({
-     key : fs.readFileSync(CONFIG.HTTPS.private_key),
-     ca : fs.readFileSync(CONFIG.HTTPS.ca),
-     cert : fs.readFileSync(CONFIG.HTTPS.cert)
- }, app);
+    var credentials = {
+        key : fs.readFileSync(CONFIG.HTTPS.private_key),
+        ca : fs.readFileSync(CONFIG.HTTPS.ca),
+        cert : fs.readFileSync(CONFIG.HTTPS.cert)
+    };
+    console.log("prepared credentials");
+    const httpsServer = https.createServer(credentials, app);
 } else {
     // Start server
+    console.log("Starting HTTPS");
     app.listen(C_SERVER_PORT, function () {
         console.log( 'KARCH  listening on port ' + C_SERVER_PORT )
     });
