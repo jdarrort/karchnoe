@@ -37,8 +37,8 @@ if (CONFIG.HTTPS) {
 const fs = require("fs");
 const https = require("https");
     var credentials = {
-        key : fs.readFileSync(CONFIG.HTTPS.private_key),
-        ca : fs.readFileSync(CONFIG.HTTPS.ca),
+        key  : fs.readFileSync(CONFIG.HTTPS.private_key),
+        ca   : fs.readFileSync(CONFIG.HTTPS.ca),
         cert : fs.readFileSync(CONFIG.HTTPS.cert)
     };
     console.log("prepared credentials");

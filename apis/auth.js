@@ -8,6 +8,7 @@ var LIBAUTH = require("../lib/libauth");
 const https = require('https');
 
 
+/********************* */
 router.get('/slackauthparams',  (req, res, next) => {
     // query params
     var query_params = {
@@ -22,6 +23,24 @@ router.get('/slackauthparams',  (req, res, next) => {
     });
 })
 
+
+
+/********************* */
+router.get('/azureauthparams',  (req, res, next) => {
+    // query params
+    var query_params = {
+        scope : CONFIG.AUTH.AZURE.scope,
+        client_id : CONFIG.AUTH.AZURE.client_id/*,
+        redirect_uri : CONFIG.AUTH.AZURE.redirect_uri*/
+
+    };
+    res.send( {
+        auth_url : "https://login.microsoftonline.com/" + CONFIG.AUTH.AZURE.tenant_id + "/oauth2/v2.0/authorize?" + Object.keys(query_params).map(p => {return p + "=" + encodeURIComponent(query_params[p]);}).join("&")
+    });
+})
+
+
+
 /********************* */
 router.get('/checksession',  (req, res, next) => {
     if (LIBAUTH.checkAccessToken(req.query["karch_session"]) ) {
@@ -31,6 +50,69 @@ router.get('/checksession',  (req, res, next) => {
     }
 });
 
+/********************* */
+router.get('/fromazure',  (req, res, next) => {
+    console.log(req.query);
+    try {
+        var query_params_obj = {
+            code : req.query["code"],
+            client_id : CONFIG.AUTH.AZURE.client_id,
+            client_secret : CONFIG.AUTH.AZURE.client_secret,
+            redirect_uri : CONFIG.AUTH.AZURE.redirect_uri
+        };        
+        var azure_path = CONFIG.AUTH.AZURE.path  + Object.keys(query_params_obj).map(p => {
+            return p + "=" + encodeURIComponent(query_params_obj[p]);
+        }).join("&");
+
+        var authReply={};
+        // must check scope against SLACK
+        const slackreq = https.get(azure_path, (azure_reply) => {
+            const { statusCode } = azure_reply;
+            const contentType = azure_reply.headers['content-type'];
+            let error;
+            if (statusCode !== 200) {
+                error = new Error('Request Failed.\n' +
+                                `Status Code: ${statusCode}`);
+            } else if (!/^application\/json/.test(contentType)) {
+                error = new Error('Invalid content-type.\n' +
+                                `Expected application/json but received ${contentType}`);
+            }
+            if (error) {
+                console.error(error.message);
+                // Consume response data to free up memory
+                azure_reply.resume();
+                return;
+            }
+
+            azure_reply.setEncoding('utf8');
+            let rawData = '';
+            azure_reply.on('data', (chunk) => {rawData += chunk;});
+            azure_reply.on('end', () => {
+            authReply = JSON.parse(rawData);
+            console.log(authReply);
+
+            if (authReply.ok == true){
+                res.cookie('karch_session', LIBAUTH.getAccessToken(), { maxAge: 60*1000*120, httpOnly: false });
+                res.redirect('/'+req.param("state") || "");
+            } else {
+                // invalid access code
+                res.redirect('/#authentication_failed');
+            }
+            // Added to redirect to right page 
+            //res.redirect('/');
+            });
+        }).on('error', (e) => {
+            console.error(`Got error: ${e.message}`);
+            // don't do anything here... would cause ECONNRESET and crash
+        });
+    }
+    catch (e){
+        console.error(e.message);
+        res.redirect('/#authentication_failed');
+        return;
+    }
+
+});
 /********************* */
 router.get('/fromslack2',  (req, res, next) => {
     try {

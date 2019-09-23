@@ -16,6 +16,14 @@ const CONFIG= {
             team_check : true, // wether team ID will be checked
             team_id : "GIVE_IT", // Represents the ACMS TEAM the user
             redirect_uri: "http://GIVE_IT/auth/fromslack2"
+        },
+        AZURE : {
+            path : "https://login.microsoftonline.com/MY_TENANT_ID/oauth2/v2.0/authorize??",
+            client_id :  "GIVE_IT",
+            client_secret: "",
+            redirect_uri: "http://GIVE_IT/auth/fromslack2",
+            scope : "openid",
+            tenant_id: "AZURE_TENANT_ID"
         }
     }
 }

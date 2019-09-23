@@ -28,6 +28,8 @@ function logout(){
     document.cookie = 'karch_session=; Max-Age=-99999999;';
     window.location = window.location.origin;
 }
+
+/********************* */
 async function signInWithSlack(){
     // retrieve slack auth path  and redirect to Slack sign in page.
     try {
@@ -41,6 +43,19 @@ async function signInWithSlack(){
     }
 }
 
+/********************* */
+async function signInWithAzure(){
+    // retrieve slack auth path  and redirect to Slack sign in page.
+    try {
+        var reply = await AUTHCall("azureauthparams");
+        if (reply.auth_url) {
+            window.location = reply.auth_url + "&state="+ encodeURIComponent(location.hash);
+        }
+    } catch (e){
+        console.error("Failed to forge AZURE signin URL")
+        kAlert("Sthg went wrong","...")
+    }
+}
 /********************* */
 function getBearer() {
     var bearer = false;
