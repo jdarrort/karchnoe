@@ -84,7 +84,7 @@ router.get('/getsvgfromfile',  (req, res, next) => {
                 if ( JAVA_PLANT_INPROGRESS_COUNT >= JAVA_MAX_PARALLEL )   {
                     JAVA_COUNTER ++;
                     if (JAVA_QUEUE.length < JAVA_MAX_QUEUE) {
-                        //console.log("Queuing element " +  JAVA_COUNTER);
+                        console.log("(" +JAVA_COUNTER+")"+ "Queuing element " +  JAVA_QUEUE.length);
                         // Queue request.
                         JAVA_QUEUE.push({
                             id : JAVA_COUNTER, 
@@ -93,6 +93,7 @@ router.get('/getsvgfromfile',  (req, res, next) => {
                             file_path : full_file_path
                         });
                     } else {
+                        console.log("(" +JAVA_COUNTER+")"+ "Too many in QUEUE " + JAVA_QUEUE.length);
                         res.status(503)
                         res.json({code:"SERVER_BUSY", msg:"Please retry later",detail: "Server Busy, hit Refresh in a few"}); 
         
@@ -131,6 +132,7 @@ function javaJarPuml (res, full_file_path, img_final_name , id ) {
     // jar library is weird... it removes -ofile  extension with svg ==> adding ".bla" to keep intact target filename
     exec(' java -jar plant/plantuml.jar -tsvg  -ofile "' + path.join(global.svgRoot, img_final_name.replace(/\.svg$/,".bla")) + '"  "' + full_file_path+'"', (err, stdout, stderr) => {
         JAVA_PLANT_INPROGRESS_COUNT --;
+        console.log("(" +id+")"+ "Render Ended " +  JAVA_QUEUE.length);
         //console.log("java jar Ended "  + id);
         if (err) {
             res.status(500)
@@ -147,6 +149,7 @@ function dequeueJavaJar(){
         //console.log("Dequeuing element " + JAVA_COUNTER);
         let queued_elem = JAVA_QUEUE[0];
         JAVA_QUEUE.splice(0,1);
+        console.log("(" +queued_elem.id+")"+ "Dequeuing element " +  JAVA_QUEUE.length);
         javaJarPuml( queued_elem.res, queued_elem.file_path, queued_elem.final_name, queued_elem.id);
     }
 }
