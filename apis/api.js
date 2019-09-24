@@ -9,6 +9,13 @@ const KRM_PLATFORM_ROOT = "platform"
 var PUML_FILES = [];
 
 var LAST_REFRESH_TIMESTAMP
+
+// Due to VM limitation, limit to 2 parallel JAVA generation
+var JAVA_QUEUE = [];
+var JAVA_COUNTER = 0;
+var JAVA_PLANT_INPROGRESS_COUNT = 0;
+const JAVA_MAX_PARALLEL = 2;
+const JAVA_MAX_QUEUE = 4;
 /********************* */
 
 
@@ -57,15 +64,15 @@ router.get('/getsvgfromfile',  (req, res, next) => {
             try {
                 var svg_file_stats = fs.statSync(  path.join( global.svgRoot, img_final_name ) );
                 if (svg_file_stats.mtime > puml_file_stats.mtime) {
-                    console.log("already exists and uptodate");
+                    //console.log("already exists and uptodate");
                     should_generate = false;
                 }
             } catch (e) {
                 // continue
-                console.log("no existing file, generate it");
+                //console.log("no existing file, generate it");
             }
         } else {
-            console.log("Forced refresh");
+            //console.log("Forced refresh");
         }
         if ( !should_generate ) {
             res.type("image/svg+xml");
@@ -74,7 +81,28 @@ router.get('/getsvgfromfile',  (req, res, next) => {
         } else {
             try {
                 res.type("image/svg+xml");
+                if ( JAVA_PLANT_INPROGRESS_COUNT >= JAVA_MAX_PARALLEL )   {
+                    JAVA_COUNTER ++;
+                    if (JAVA_QUEUE.length < JAVA_MAX_QUEUE) {
+                        //console.log("Queuing element " +  JAVA_COUNTER);
+                        // Queue request.
+                        JAVA_QUEUE.push({
+                            id : JAVA_COUNTER, 
+                            res : res,
+                            final_name : img_final_name,
+                            file_path : full_file_path
+                        });
+                    } else {
+                        res.status(503)
+                        res.json({code:"SERVER_BUSY", msg:"Please retry later",detail: "Server Busy, hit Refresh in a few"}); 
+        
+                    }
+                    return;    
+                }
 
+                javaJarPuml( res, full_file_path,img_final_name , JAVA_COUNTER);
+
+                /*
                 // FYI, context of execution is root path of script.
                 // jar library is weird... it removes -ofile  extension with svg ==> adding ".bla" to keep intact target filename
                 exec(' java -jar plant/plantuml.jar -tsvg  -ofile "' + path.join(global.svgRoot, img_final_name.replace(/\.svg$/,".bla")) + '"  "' + full_file_path+'"', (err, stdout, stderr) => {
@@ -84,7 +112,7 @@ router.get('/getsvgfromfile',  (req, res, next) => {
                         return;
                     }
                     res.sendFile(img_final_name, { root:  global.svgRoot});
-                }); 
+                }); */
             } catch (e) {
                 res.status(500)
                 res.json({code:"PUML_ERROR", msg:"Generation failed"}); 
@@ -97,6 +125,31 @@ router.get('/getsvgfromfile',  (req, res, next) => {
     }        
 });
 
+function javaJarPuml (res, full_file_path, img_final_name , id ) {
+    JAVA_PLANT_INPROGRESS_COUNT ++;
+    // FYI, context of execution is root path of script.
+    // jar library is weird... it removes -ofile  extension with svg ==> adding ".bla" to keep intact target filename
+    exec(' java -jar plant/plantuml.jar -tsvg  -ofile "' + path.join(global.svgRoot, img_final_name.replace(/\.svg$/,".bla")) + '"  "' + full_file_path+'"', (err, stdout, stderr) => {
+        JAVA_PLANT_INPROGRESS_COUNT --;
+        //console.log("java jar Ended "  + id);
+        if (err) {
+            res.status(500)
+            res.json({code:"PUML_ERROR", msg:"Generation failed",detail: err.message}); 
+            dequeueJavaJar();
+            return;
+        }
+        res.sendFile(img_final_name, { root:  global.svgRoot});
+        dequeueJavaJar();
+    }); 
+}
+function dequeueJavaJar(){
+    if (JAVA_QUEUE.length) {
+        //console.log("Dequeuing element " + JAVA_COUNTER);
+        let queued_elem = JAVA_QUEUE[0];
+        JAVA_QUEUE.splice(0,1);
+        javaJarPuml( queued_elem.res, queued_elem.file_path, queued_elem.final_name, queued_elem.id);
+    }
+}
 /********************* */
 /*
 - dir : path from karch_root
