@@ -4,7 +4,7 @@ var fs = require('fs');
 var path = require('path');
 const { exec } = require('child_process');
 
-const REFRESH_PUML_LIST_FREQUENCY = 10000;
+const REFRESH_PUML_LIST_FREQUENCY = 60000;
 const KRM_PLATFORM_ROOT = "platform"
 var PUML_FILES = [];
 
@@ -15,7 +15,7 @@ var JAVA_QUEUE = [];
 var JAVA_COUNTER = 0;
 var JAVA_PLANT_INPROGRESS_COUNT = 0;
 const JAVA_MAX_PARALLEL = 2;
-const JAVA_MAX_QUEUE = 4;
+const JAVA_MAX_QUEUE = 3;
 /********************* */
 
 
@@ -25,7 +25,7 @@ const JAVA_MAX_QUEUE = 4;
  */
 router.get('/browsedir',  (req, res, next) => {
     try {
-        shouldRefreshPumls();
+        //shouldRefreshPumls();
         var listfiles  = readdir(req.query.dir);
         res.json(listfiles);
     
@@ -45,7 +45,7 @@ router.get('/getsvgfromfile',  (req, res, next) => {
     try {
         // check if previously generated image exists.
         // if yes, check timestamp vs plantuml source, to see if update required.
-        shouldRefreshPumls();
+        //shouldRefreshPumls();
         var img_basename = req.query.file.replace(/\.\w+$/,""); // remove extension
         var img_final_name = getHashForDir(req.query.dir) + "_" + img_basename + ".svg";
 
@@ -395,7 +395,7 @@ async function refreshPumlFiles (){
     let duration = Date.now() - start_time;
     console.log("Nb pumls loaded : " + TMP_PUML_FILES.length +", duration=" + duration);
     PUML_FILES = TMP_PUML_FILES;
-    setTimeout(refreshPumlFiles, 60000);
+    setTimeout(refreshPumlFiles, REFRESH_PUML_LIST_FREQUENCY);
 }
 
 //==========================
