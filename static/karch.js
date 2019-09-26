@@ -8,11 +8,13 @@ window.onscroll = function() {
 window.addEventListener("hashchange",function(event){ manageHash() },false);
 
 function toggleBrowser(){
-    document.getElementById("i_search").focus();
     (document.getElementById('browser_active').style.display=='none') ? showBrowser(): hideBrowser();
 }
 function hideBrowser(){     document.getElementById('browser_active').style.display='none';}
-function showBrowser(){     document.getElementById('browser_active').style.display='block';}
+function showBrowser(){     
+    document.getElementById('browser_active').style.display='block';
+    document.getElementById("i_search").focus();
+}
 
 function kAlert(code, msg){
     document.getElementById("alert_code").innerText = code;
