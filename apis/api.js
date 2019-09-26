@@ -251,12 +251,7 @@ function searchFilePattern(in_pattern){
         console.log("Wildcarded search");
         use_regex = new RegExp(in_pattern.replace(/\*/g,".*"),"i");
     }
-    var b = PUML_FILES.filter(f => { if (f.filename.match(/kts_cm/)) return true;})
-    b.filter( f => { 
-        var a =  use_regex.test(f.filename)
-        return a;
-    });
-    if (use_regex) {
+    if (use_regex !== false) {
         // Browse through PUML_FILES
         PUML_FILES.forEach( file => {
             if (use_regex.test(file.filename)) {
