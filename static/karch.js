@@ -8,6 +8,7 @@ window.onscroll = function() {
 window.addEventListener("hashchange",function(event){ manageHash() },false);
 
 function toggleBrowser(){
+    document.getElementById("i_search").focus();
     (document.getElementById('browser_active').style.display=='none') ? showBrowser(): hideBrowser();
 }
 function hideBrowser(){     document.getElementById('browser_active').style.display='none';}
