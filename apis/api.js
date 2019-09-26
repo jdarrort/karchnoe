@@ -203,7 +203,7 @@ router.get('/searchapi',  (req, res, next) => {
  */
 router.get('/searchfile',  (req, res, next) => {
     try{
-        shouldRefreshPumls();
+        //shouldRefreshPumls();
         var filepattern = req.query.filename.toLowerCase();
         var matches = searchFilePattern(filepattern)  // Browse through PUML_FILES
         // Group results by Folder ? 
@@ -249,9 +249,13 @@ function searchFilePattern(in_pattern){
     // Check for wildcard "*", and use regex is found.
     if (in_pattern.indexOf("*") >= 0 ) {
         console.log("Wildcarded search");
-        use_regex = new RegExp(in_pattern.replace(/\*/g,".*"),"ig");
+        use_regex = new RegExp(in_pattern.replace(/\*/g,".*"),"i");
     }
-
+    var b = PUML_FILES.filter(f => { if (f.filename.match(/kts_cm/)) return true;})
+    b.filter( f => { 
+        var a =  use_regex.test(f.filename)
+        return a;
+    });
     if (use_regex) {
         // Browse through PUML_FILES
         PUML_FILES.forEach( file => {
