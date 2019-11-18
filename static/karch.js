@@ -375,14 +375,24 @@ function getTab(in_file){
     document.getElementById("content_root_el").appendChild(NEW_TAB.tab_content_el);
 
     // Header to force reload
-    var content_refresh_el = document.createElement("div");
+    var content_refresh_el = document.createElement("span");
     content_refresh_el.innerHTML = "<b>(Force Refresh)</b>";
     content_refresh_el.style.cursor = "pointer";
     content_refresh_el.addEventListener("click", () => {
         NEW_TAB.refresh(true); 
-    }) 
-    
+    });
     NEW_TAB.tab_content_el.appendChild(content_refresh_el);
+
+    var content_dlpng_el = document.createElement("span");
+    content_dlpng_el.innerHTML = " - <b>(Download as PNG)</b>";
+    content_dlpng_el.style.cursor = "pointer";
+    content_dlpng_el.addEventListener("click", () => {
+        var url = location.origin + "/api/getpngfromfile?file=" + decodeURIComponent(in_file.filename) + "&dir=" +  decodeURIComponent(in_file.path);
+        var win = window.open(url, '_blank');
+        win.focus();
+    });
+    
+    NEW_TAB.tab_content_el.appendChild(content_dlpng_el);
 
     // Will hold svg image
     NEW_TAB.tab_svg_el.style.textAlign="center";

@@ -16,6 +16,9 @@ var JAVA_COUNTER = 0;
 var JAVA_PLANT_INPROGRESS_COUNT = 0;
 const JAVA_MAX_PARALLEL = 2;
 const JAVA_MAX_QUEUE = 3;
+
+
+//const HASH_FOR_PNG_DOWNLOAD
 /********************* */
 
 
@@ -90,7 +93,8 @@ router.get('/getsvgfromfile',  (req, res, next) => {
                             id : JAVA_COUNTER, 
                             res : res,
                             final_name : img_final_name,
-                            file_path : full_file_path
+                            file_path : full_file_path,
+                            format : "svg"
                         });
                     } else {
                         console.log("(" +JAVA_COUNTER+")"+ "Too many in QUEUE " + JAVA_QUEUE.length);
@@ -126,6 +130,7 @@ router.get('/getsvgfromfile',  (req, res, next) => {
     }        
 });
 
+//---------------------------------------------------------------------
 function javaJarPuml (res, full_file_path, img_final_name , id ) {
     JAVA_PLANT_INPROGRESS_COUNT ++;
     // FYI, context of execution is root path of script.
@@ -144,13 +149,118 @@ function javaJarPuml (res, full_file_path, img_final_name , id ) {
         dequeueJavaJar();
     }); 
 }
+
+/********************* */
+/*
+- file : filename 
+- dir : path from karch_root
+- force (o) : if present, force  regeneration of SVG
+ */
+router.get('/getpngfromfile',  (req, res, next) => {
+    try {
+        // check if previously generated image exists.
+        // if yes, check timestamp vs plantuml source, to see if update required.
+        //shouldRefreshPumls();
+        var img_basename = req.query.file.replace(/\.\w+$/,""); // remove extension
+        var img_final_name = getHashForDir(req.query.dir) + "_" + img_basename + ".png";
+
+        var full_file_path = path.join(global.repoRoot,  req.query.dir,  req.query.file);
+        // get puml file if exists
+        try {
+            var puml_file_stats = fs.statSync(full_file_path );
+        } catch (e) {
+            res.status(404)
+            res.json({code:"NOT_FOUND", msg:"file not found"}); 
+            return;
+        } 
+        // only launch puml-> svg generation if file is old.
+        var should_generate = true;
+        if (!req.query.force ){
+            try {
+                var svg_file_stats = fs.statSync(  path.join( global.svgRoot, img_final_name ) );
+                if (svg_file_stats.mtime > puml_file_stats.mtime) {
+                    //console.log("already exists and uptodate");
+                    should_generate = false;
+                }
+            } catch (e) {
+                // continue
+                //console.log("no existing file, generate it");
+            }
+        } else {
+            //console.log("Forced refresh");
+        }
+        if ( !should_generate ) {
+            res.type("image/png");
+            res.setHeader('Content-Disposition', 'attachment; filename=' + img_final_name);
+            res.sendFile( img_final_name, { root:  global.svgRoot } );
+            return;
+        } else {
+            try {
+                res.type("image/png");
+                if ( JAVA_PLANT_INPROGRESS_COUNT >= JAVA_MAX_PARALLEL )   {
+                    JAVA_COUNTER ++;
+                    if (JAVA_QUEUE.length < JAVA_MAX_QUEUE) {
+                        console.log("(" +JAVA_COUNTER+")"+ "Queuing element " +  JAVA_QUEUE.length);
+                        // Queue request.
+                        JAVA_QUEUE.push({
+                            id : JAVA_COUNTER, 
+                            res : res,
+                            final_name : img_final_name,
+                            file_path : full_file_path,
+                            format : "png"
+                        });
+                    } else {
+                        console.log("(" +JAVA_COUNTER+")"+ "Too many in QUEUE " + JAVA_QUEUE.length);
+                        res.status(503)
+                        res.json({code:"SERVER_BUSY", msg:"Please retry later",detail: "Server Busy, hit Refresh in a few"}); 
+                    }
+                    return;    
+                }
+
+                javaJarPumlPng( res, full_file_path,img_final_name , JAVA_COUNTER);
+            } catch (e) {
+                res.status(500)
+                res.json({code:"PUML_ERROR", msg:"Generation failed"}); 
+                return;
+            }
+        }
+    } catch (e) {
+        res.status(500)
+        res.json({code:"SERVER_ERROR", msg: e.msg }); 
+    }        
+});
+//---------------------------------------------------------------------
+function javaJarPumlPng (res, full_file_path, img_final_name , id ) {
+    JAVA_PLANT_INPROGRESS_COUNT ++;
+    // FYI, context of execution is root path of script.
+    // jar library is weird... it removes -ofile  extension with svg ==> adding ".bla" to keep intact target filename
+    exec(' java -jar plant/plantuml.jar -tpng  -ofile "' + path.join(global.svgRoot, img_final_name.replace(/\.png$/,".bla")) + '"  "' + full_file_path+'"', (err, stdout, stderr) => {
+        JAVA_PLANT_INPROGRESS_COUNT --;
+        console.log("(" +id+")"+ "Render Ended " +  JAVA_QUEUE.length);
+        //console.log("java jar Ended "  + id);
+        if (err) {
+            res.status(500)
+            res.json({code:"PUML_ERROR", msg:"Generation failed",detail: err.message}); 
+            dequeueJavaJar();
+            return;
+        }
+        res.setHeader('Content-Disposition', 'attachment; filename=' + img_final_name);
+        res.sendFile(img_final_name, { root:  global.svgRoot});
+        dequeueJavaJar();
+    }); 
+}
+//---------------------------------------------------------------------
 function dequeueJavaJar(){
     if (JAVA_QUEUE.length) {
         //console.log("Dequeuing element " + JAVA_COUNTER);
         let queued_elem = JAVA_QUEUE[0];
         JAVA_QUEUE.splice(0,1);
         console.log("(" +queued_elem.id+")"+ "Dequeuing element " +  JAVA_QUEUE.length);
-        javaJarPuml( queued_elem.res, queued_elem.file_path, queued_elem.final_name, queued_elem.id);
+        if (queued_elem.format == "svg") {
+            javaJarPuml( queued_elem.res, queued_elem.file_path, queued_elem.final_name, queued_elem.id);
+        } else if (queued_elem.format == "png") {
+            javaJarPumlPng( queued_elem.res, queued_elem.file_path, queued_elem.final_name, queued_elem.id);
+        }
     }
 }
 /********************* */
@@ -269,6 +379,7 @@ function searchFilePattern(in_pattern){
     return matches;
 }
 
+//------------------------------------------
 function getHashForDir(in_dir) {
     var hash = 0, i, chr;
     if (in_dir.length === 0) return hash;
@@ -282,6 +393,7 @@ function getHashForDir(in_dir) {
   
 
 
+//------------------------------------------
 /* Browse a DIRECTORY , non recursively, splitting dirs and files*/
 function readdir (dir) {
     var direlems={
@@ -314,6 +426,7 @@ function readdir (dir) {
     return direlems;
 }
 
+//------------------------------------------
 function getFileType(in_filename){
     let extension = in_filename.split(".").slice(-1)[0].toLowerCase();
     switch (extension) {
@@ -327,6 +440,7 @@ function getFileType(in_filename){
         default : "other";
     }
 }
+//------------------------------------------
 /* DEPRECATED
 WAS FULLY SYNC, affecting service availability */
 function readPumlFiles (in_dir){
@@ -351,6 +465,7 @@ function readPumlFiles (in_dir){
     return results;
 }
 
+//------------------------------------------
 async function readPumlFilesAsync (in_dir){
     var results = [];
     let working_path = global.repoRoot;
@@ -382,11 +497,13 @@ async function readPumlFilesAsync (in_dir){
 
 
 
+//------------------------------------------
 function shouldRefreshPumls(){
     if ( (Date.now()- LAST_REFRESH_TIMESTAMP) > REFRESH_PUML_LIST_FREQUENCY ) {
         refreshPumlFiles();
     }
 }
+//------------------------------------------
 async function refreshPumlFiles (){
     let start_time =  Date.now() ;
     console.log("Start Refreshing PUML list" );
