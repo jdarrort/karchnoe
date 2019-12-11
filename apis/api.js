@@ -163,6 +163,7 @@ router.get('/getpngfromfile',  (req, res, next) => {
         //shouldRefreshPumls();
         var img_basename = req.query.file.replace(/\.\w+$/,""); // remove extension
         var img_final_name = getHashForDir(req.query.dir) + "_" + img_basename + ".png";
+        res.targetFileName = img_basename+".png";
 
         var full_file_path = path.join(global.repoRoot,  req.query.dir,  req.query.file);
         // get puml file if exists
@@ -244,7 +245,7 @@ function javaJarPumlPng (res, full_file_path, img_final_name , id ) {
             dequeueJavaJar();
             return;
         }
-        res.setHeader('Content-Disposition', 'attachment; filename=' + img_final_name);
+        res.setHeader('Content-Disposition', 'attachment; filename=' + res.targetFileName);
         res.sendFile(img_final_name, { root:  global.svgRoot});
         dequeueJavaJar();
     }); 
